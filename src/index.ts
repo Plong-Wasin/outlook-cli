@@ -33,6 +33,7 @@ async function main(args: string[]): Promise<void> {
   if (command === 'api') return runApi(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'draft') return runDraftCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'me' || command === 'folders' || command === 'messages') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (!command) usage("Run 'outlook --help' for usage.");
   throw new CliError(`Unknown command: ${command}. Run 'outlook --help' for usage.`, 2);
 }

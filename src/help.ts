@@ -7,6 +7,8 @@ Commands:
   me         Show the signed-in user
   api        Call any Microsoft Graph endpoint
   draft      Create or update a Draft
+  folders    List Mail folders
+  messages   List Messages in Inbox or another Mail folder
 
 Commands and options:
   auth login | check | logout
@@ -15,6 +17,9 @@ Commands and options:
   api <METHOD> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]
   draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
   draft --update <id> [fields]
+  folders [--cursor <cursor> | --all] [--json]
+  messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
+           [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
