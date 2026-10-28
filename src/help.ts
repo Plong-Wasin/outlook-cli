@@ -10,6 +10,10 @@ Commands:
   folders    List Mail folders
   messages   List Messages in Inbox or another Mail folder
   message    Read one Message by id or Outlook URL
+  contacts   List your Contacts
+  users      List directory Users
+  groups     List Groups
+  members    List a Group's members
 
 Commands and options:
   auth login | check | logout
@@ -22,6 +26,8 @@ Commands and options:
   messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
            [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
   message <id|url> [--html] [--json]
+  contacts | users | groups [--top N] [--cursor CURSOR] [--all] [--json]
+  members <group> [--top N] [--cursor CURSOR] [--all] [--json]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
