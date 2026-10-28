@@ -5,11 +5,14 @@ Commands:
   auth       Sign in and manage Profiles
   config     Show configuration with secrets masked
   me         Show the signed-in user
+  draft      Create or update a Draft
 
 Commands and options:
   auth login | check | logout
   config show
   me [--json]
+  draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
+  draft --update <id> [fields]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
