@@ -50,10 +50,10 @@ it('lists newest Inbox Messages by default with 25 rows and full ids', async () 
 it('resolves a Mail folder name and sends each message filter to Graph', async () => {
   servers.graph.setReply((request, response) => {
     response.writeHead(200, { 'Content-Type': 'application/json' });
-    if (request.path === '/me/mailFolders') response.end(JSON.stringify({ value: [{ id: 'folder-archive-id', displayName: 'Archive' }] }));
+    if (request.path === '/me/mailFolders') response.end(JSON.stringify({ value: [{ id: 'folder-archive-id', displayName: 'Projects' }] }));
     else response.end(JSON.stringify({ value: [] }));
   });
-  const result = await cli.run(['messages', '--folder', 'Archive', '--unread', '--from', 'ada@example.test', '--since', '2026-10-01', '--top', '7']);
+  const result = await cli.run(['messages', '--folder', 'Projects', '--unread', '--from', 'ada@example.test', '--since', '2026-10-01', '--top', '7']);
   assert.equal(result.code, 0, result.stderr);
   assert.equal(servers.graph.requests[0]?.path, '/me/mailFolders');
   const request = servers.graph.requests[1]?.path ?? '';
@@ -90,16 +90,16 @@ it('rejects unknown and ambiguous folder names without listing Messages', async 
   servers.graph.setReply((_request, response) => {
     response.writeHead(200, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ value: [
-      { id: 'folder-a', displayName: 'Archive' },
-      { id: 'folder-b', displayName: 'Archive' },
+      { id: 'folder-a', displayName: 'Projects' },
+      { id: 'folder-b', displayName: 'Projects' },
     ] }));
   });
   const unknown = await cli.run(['messages', '--folder', 'Missing']);
   assert.equal(unknown.code, 2);
   assert.match(unknown.stderr, /Unknown Mail folder 'Missing'/);
-  const ambiguous = await cli.run(['messages', '--folder', 'Archive']);
+  const ambiguous = await cli.run(['messages', '--folder', 'Projects']);
   assert.equal(ambiguous.code, 2);
-  assert.match(ambiguous.stderr, /Ambiguous Mail folder 'Archive'.*folder-a.*folder-b/);
+  assert.match(ambiguous.stderr, /Ambiguous Mail folder 'Projects'.*folder-a.*folder-b/);
   assert.ok(servers.graph.requests.every(({ path }) => path === '/me/mailFolders'));
 });
 
