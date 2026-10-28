@@ -40,6 +40,7 @@ outlook config show
 outlook me [--json]
 outlook folders [--cursor <cursor> | --all] [--json]
 outlook messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>] [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
+# --search cannot be combined with --unread, --from, or --since (Graph limit); --folder accepts well-known names such as archive, sentitems
 outlook message <id|url> [--html] [--json]
 outlook contacts [--top N] [--cursor CURSOR] [--all] [--json]
 outlook users [--top N] [--cursor CURSOR] [--all] [--json]

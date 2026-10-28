@@ -40,7 +40,7 @@ Run `outlook --help` for the concise reference and `outlook --version` to check 
 | `config show` | Show Profiles and defaults with secrets masked. |
 | `me [--json]` | Show the signed-in user. |
 | `folders [--cursor <cursor> \| --all] [--json]` | List Mail folders. |
-| `messages [--folder <name\|id>] [--unread] [--from <address>] [--since <date>] [--search <text>] [--top <count>] [--cursor <cursor> \| --all] [--json]` | List newest Messages, Inbox by default. |
+| `messages [--folder <name\|id>] [--unread] [--from <address>] [--since <date>] [--search <text>] [--top <count>] [--cursor <cursor> \| --all] [--json]` | List newest Messages, Inbox by default. `--search` cannot be combined with `--unread`, `--from`, or `--since`; `--folder` also accepts Graph well-known names such as `archive` and `sentitems`. |
 | `message <id\|url> [--html] [--json]` | Read one Message as plain text, or HTML with `--html`. |
 | `contacts [--top N] [--cursor CURSOR] [--all] [--json]` | List Contacts. |
 | `users [--top N] [--cursor CURSOR] [--all] [--json]` | Search directory Users. |

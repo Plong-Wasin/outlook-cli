@@ -53,7 +53,7 @@ it('resolves a Mail folder name and sends each message filter to Graph', async (
     if (request.path === '/me/mailFolders') response.end(JSON.stringify({ value: [{ id: 'folder-archive-id', displayName: 'Archive' }] }));
     else response.end(JSON.stringify({ value: [] }));
   });
-  const result = await cli.run(['messages', '--folder', 'Archive', '--unread', '--from', 'ada@example.test', '--since', '2026-10-01', '--search', 'budget', '--top', '7']);
+  const result = await cli.run(['messages', '--folder', 'Archive', '--unread', '--from', 'ada@example.test', '--since', '2026-10-01', '--top', '7']);
   assert.equal(result.code, 0, result.stderr);
   assert.equal(servers.graph.requests[0]?.path, '/me/mailFolders');
   const request = servers.graph.requests[1]?.path ?? '';
@@ -61,8 +61,29 @@ it('resolves a Mail folder name and sends each message filter to Graph', async (
   const params = query(request);
   assert.equal(params.get('$top'), '7');
   assert.equal(params.get('$orderby'), 'receivedDateTime desc');
-  assert.equal(params.get('$filter'), "isRead eq false and from/emailAddress/address eq 'ada@example.test' and receivedDateTime ge 2026-10-01T00:00:00.000Z");
+  assert.equal(params.get('$filter'), "receivedDateTime ge 2026-10-01T00:00:00.000Z and isRead eq false and from/emailAddress/address eq 'ada@example.test'");
+  assert.equal(params.get('$search'), null);
+});
+
+it('sends --search without $orderby or $filter and refuses to combine it with filters', async () => {
+  servers.graph.reset();
+  servers.graph.setReply((_request, response) => { response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ value: [] })); });
+  const result = await cli.run(['messages', '--search', 'budget']);
+  assert.equal(result.code, 0, result.stderr);
+  const params = query(servers.graph.requests[0]?.path ?? '');
   assert.equal(params.get('$search'), '"budget"');
+  assert.equal(params.get('$orderby'), null);
+  assert.equal(params.get('$filter'), null);
+  const refused = await cli.run(['messages', '--search', 'budget', '--unread']);
+  assert.equal(refused.code, 2);
+});
+
+it('filters by unread with the $orderby property leading the $filter', async () => {
+  servers.graph.reset();
+  servers.graph.setReply((_request, response) => { response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ value: [] })); });
+  const result = await cli.run(['messages', '--unread']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(query(servers.graph.requests[0]?.path ?? '').get('$filter'), 'receivedDateTime ge 1970-01-01T00:00:00.000Z and isRead eq false');
 });
 
 it('rejects unknown and ambiguous folder names without listing Messages', async () => {
@@ -115,4 +136,13 @@ it('stops --all at the 100 page cap and leaves the next cursor on stderr', async
   assert.equal(servers.graph.requests.length, 100);
   assert.match(result.stdout, /message-100/);
   assert.match(result.stderr, /more available: --cursor/);
+});
+
+it('sends well-known folder names as-is without listing folders', async () => {
+  servers.graph.reset();
+  servers.graph.setReply((_request, response) => { response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ value: [] })); });
+  const result = await cli.run(['messages', '--folder', 'SentItems']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(servers.graph.requests.length, 1);
+  assert.ok((servers.graph.requests[0]?.path ?? '').startsWith('/me/mailFolders/sentitems/messages?'));
 });

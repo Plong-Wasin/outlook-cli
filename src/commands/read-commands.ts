@@ -120,20 +120,27 @@ function messageQuery(args: string[]): URLSearchParams {
   const top = option(args, '--top') ?? '25';
   if (!/^\d+$/.test(top) || Number(top) < 1 || Number(top) > 1000) usage("Option '--top' must be an integer from 1 to 1000.");
   query.set('$top', top);
-  query.set('$orderby', 'receivedDateTime desc');
-  const filters: string[] = [];
-  if (args.includes('--unread')) filters.push('isRead eq false');
-  const from = option(args, '--from');
-  if (from) filters.push(`from/emailAddress/address eq '${from.replaceAll("'", "''")}'`);
-  const since = option(args, '--since');
-  if (since) {
-    const date = new Date(since);
-    if (Number.isNaN(date.getTime())) usage("Option '--since' must be a valid date.");
-    filters.push(`receivedDateTime ge ${date.toISOString()}`);
-  }
-  if (filters.length) query.set('$filter', filters.join(' and '));
   const search = option(args, '--search');
-  if (search) query.set('$search', `"${search.replaceAll('"', '\\"')}"`);
+  const unread = args.includes('--unread');
+  const from = option(args, '--from');
+  const since = option(args, '--since');
+  if (search) {
+    // Graph rejects $search combined with $filter or $orderby; results come back ranked by relevance.
+    if (unread || from || since) usage("Option '--search' cannot be combined with '--unread', '--from', or '--since'.");
+    query.set('$search', `"${search.replaceAll('"', '\\"')}"`);
+    return query;
+  }
+  query.set('$orderby', 'receivedDateTime desc');
+  let sinceDate = new Date(0);
+  if (since) {
+    sinceDate = new Date(since);
+    if (Number.isNaN(sinceDate.getTime())) usage("Option '--since' must be a valid date.");
+  }
+  // Graph requires the $orderby property to lead the $filter, or it fails with InefficientFilter.
+  const filters = [`receivedDateTime ge ${sinceDate.toISOString()}`];
+  if (unread) filters.push('isRead eq false');
+  if (from) filters.push(`from/emailAddress/address eq '${from.replaceAll("'", "''")}'`);
+  query.set('$filter', filters.join(' and '));
   return query;
 }
 

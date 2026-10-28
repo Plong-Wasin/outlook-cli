@@ -12,8 +12,11 @@ interface FolderCollection {
 }
 
 const PAGE_CAP = 100;
+// Graph well-known folder names work in any mailbox language and for nested folders.
+const WELL_KNOWN = new Set(['inbox', 'drafts', 'sentitems', 'deleteditems', 'archive', 'junkemail', 'outbox']);
 
 export async function resolveMailFolderId(ctx: Context, value: string): Promise<string> {
+  if (WELL_KNOWN.has(value.trim().toLowerCase())) return value.trim().toLowerCase();
   const folders = await listMailFolders(ctx);
   const matches = folders.filter((folder) => folder.id === value || equal(folder.displayName, value));
   if (matches.length === 1 && matches[0]?.id) return matches[0].id;
