@@ -7,6 +7,7 @@ Commands:
   me         Show the signed-in user
   api        Call any Microsoft Graph endpoint
   draft      Create or update a Draft
+  send       Send a new Message or saved Draft (requires --yes)
   mark       Mark Messages read or unread
   delete     Delete Messages (requires --yes)
   folders    List Mail folders
@@ -24,6 +25,8 @@ Commands and options:
   api <METHOD> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]
   draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
   draft --update <id> [fields]
+  send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] --yes
+  send --draft <id> --yes
   mark <id...> --read|--unread
   delete <id...> --yes
   folders [--cursor <cursor> | --all] [--json]
