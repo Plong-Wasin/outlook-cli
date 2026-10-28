@@ -38,6 +38,7 @@ function table(headers: string[], rows: string[][]): string {
 }
 
 export async function runReadCommand(ctx: Context, command: string, args: string[]): Promise<void> {
+  if (command === 'message') return readMessage(ctx, args);
   let response: unknown;
   let rows: unknown[] | undefined;
   let nextLink: string | undefined;
@@ -165,12 +166,6 @@ function option(args: string[], name: string): string | undefined {
   const value = arg === name ? args[index + 1] : arg.slice(name.length + 1);
   if (!value || value.startsWith('-')) usage(`Option '${name}' requires a value.`);
   return value;
-  if (command === 'message') return readMessage(ctx, args);
-  if (command !== 'me') usage(`Unknown read command: ${command}`);
-  const response = await graphRequest(ctx, 'GET', '/me');
-  if (args.includes('--json')) { process.stdout.write(`${JSON.stringify(response, null, 2)}\n`); return; }
-  const user = response as { displayName?: string; userPrincipalName?: string; mail?: string };
-  process.stdout.write(table(['NAME', 'EMAIL'], [[user.displayName ?? 'Current user', user.mail ?? user.userPrincipalName ?? '']]));
 }
 
 async function readMessage(ctx: Context, args: string[]): Promise<void> {
