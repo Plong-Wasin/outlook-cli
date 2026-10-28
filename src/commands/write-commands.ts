@@ -1,5 +1,6 @@
 import { graphRequest, type Context } from './auth-commands.js';
 import { CliError, usage } from '../utils/errors.js';
+import { messageId } from '../utils/message-id.js';
 
 interface WriteOptions {
   ids: string[];
@@ -10,13 +11,11 @@ interface WriteOptions {
 export async function runWriteCommand(ctx: Context, command: 'mark' | 'delete', args: string[]): Promise<void> {
   const options = parseOptions(command, args);
   const ids = options.ids.map(messageId);
-  if (!ids.length) usage(`Usage: outlook ${command} <id...>${command === 'mark' ? ' --read|--unread' : ''} --yes`);
+  if (!ids.length) usage(`Usage: outlook ${command} <id...>${command === 'mark' ? ' --read|--unread' : ' --yes'}`);
   if (command === 'mark' && options.isRead === undefined) usage("Choose either '--read' or '--unread'.");
-  if (!options.yes) {
-    process.stdout.write(command === 'delete'
-      ? `Would delete Messages:\n${ids.map((id) => `#${id}`).join('\n')}\n`
-      : `Would mark Messages ${options.isRead ? 'read' : 'unread'}:\n${ids.map((id) => `#${id}`).join('\n')}\n`);
-    throw new CliError(`Refusing to ${command === 'delete' ? 'delete Messages' : 'mark Messages'} without '--yes'.`, 2);
+  if (command === 'delete' && !options.yes) {
+    process.stdout.write(`Would delete Messages:\n${ids.map((id) => `#${id}`).join('\n')}\n`);
+    throw new CliError("Refusing to delete Messages without '--yes'.", 2);
   }
 
   const failures: string[] = [];
@@ -50,9 +49,4 @@ function parseOptions(command: 'mark' | 'delete', args: string[]): WriteOptions 
     options.ids.push(arg);
   }
   return options;
-}
-
-function messageId(input: string): string {
-  if (!/^[A-Za-z0-9_+\/=\-]+$/.test(input)) usage('Invalid Message id. Use a Graph id.');
-  return input;
 }

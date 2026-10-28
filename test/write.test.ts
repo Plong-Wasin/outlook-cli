@@ -63,9 +63,11 @@ it('rejects --json for every write command without sending a request', async () 
   assert.equal(servers.graph.requests.length, 0);
 });
 
-it('refuses mark without --yes and sends no request', async () => {
+it('marks without --yes because the change is reversible', async () => {
+  servers.graph.reset();
+  servers.graph.setReply((_request, response) => { response.writeHead(200, { 'Content-Type': 'application/json' }); response.end('{}'); });
   const result = await cli.run(['mark', 'message-one', '--read']);
-  assert.equal(result.code, 2);
-  assert.match(result.stdout, /message-one/);
-  assert.equal(servers.graph.requests.length, 0);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(servers.graph.requests.length, 1);
+  assert.equal(servers.graph.requests[0]!.method, 'PATCH');
 });

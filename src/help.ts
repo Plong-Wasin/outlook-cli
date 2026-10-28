@@ -24,8 +24,8 @@ Commands and options:
   api <METHOD> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]
   draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
   draft --update <id> [fields]
-  mark <id...> --read|--unread --yes
-  delete <id...> [--yes]
+  mark <id...> --read|--unread
+  delete <id...> --yes
   folders [--cursor <cursor> | --all] [--json]
   messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
            [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
