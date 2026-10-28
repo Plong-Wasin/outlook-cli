@@ -5,11 +5,16 @@ Commands:
   auth       Sign in and manage Profiles
   config     Show configuration with secrets masked
   me         Show the signed-in user
+  folders    List Mail folders
+  messages   List Messages in Inbox or another Mail folder
 
 Commands and options:
   auth login | check | logout
   config show
   me [--json]
+  folders [--cursor <cursor> | --all] [--json]
+  messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
+           [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)

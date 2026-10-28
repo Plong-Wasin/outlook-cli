@@ -28,7 +28,7 @@ async function main(args: string[]): Promise<void> {
   const ctx = selectedContext(process.env, options);
   if (command === 'auth') return runAuth(ctx, subcommand);
   if (command === 'config') return runConfig(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'me' || command === 'folders' || command === 'messages') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (!command) usage("Run 'outlook --help' for usage.");
   throw new CliError(`Unknown command: ${command}. Run 'outlook --help' for usage.`, 2);
 }
