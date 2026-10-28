@@ -4,6 +4,7 @@ import { runConfig } from './commands/config-commands.js';
 import { runReadCommand } from './commands/read-commands.js';
 import { runApi } from './commands/api-commands.js';
 import { runDraftCommand } from './commands/draft-commands.js';
+import { runSendCommand } from './commands/send-commands.js';
 import { CliError, usage } from './utils/errors.js';
 
 function globals(args: string[]): { options: GlobalOptions; rest: string[] } {
@@ -33,6 +34,7 @@ async function main(args: string[]): Promise<void> {
   if (command === 'api') return runApi(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'draft') return runDraftCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'send') return runSendCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'me' || command === 'folders' || command === 'messages') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'message') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (!command) usage("Run 'outlook --help' for usage.");
