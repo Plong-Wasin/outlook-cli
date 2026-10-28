@@ -5,11 +5,13 @@ Commands:
   auth       Sign in and manage Profiles
   config     Show configuration with secrets masked
   me         Show the signed-in user
+  api        Call any Microsoft Graph endpoint
 
 Commands and options:
   auth login | check | logout
   config show
   me [--json]
+  api <METHOD> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)

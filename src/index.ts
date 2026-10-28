@@ -2,6 +2,7 @@ import { HELP } from './help.js';
 import { runAuth, selectedContext, type GlobalOptions } from './commands/auth-commands.js';
 import { runConfig } from './commands/config-commands.js';
 import { runReadCommand } from './commands/read-commands.js';
+import { runApi } from './commands/api-commands.js';
 import { CliError, usage } from './utils/errors.js';
 
 function globals(args: string[]): { options: GlobalOptions; rest: string[] } {
@@ -28,6 +29,7 @@ async function main(args: string[]): Promise<void> {
   const ctx = selectedContext(process.env, options);
   if (command === 'auth') return runAuth(ctx, subcommand);
   if (command === 'config') return runConfig(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'api') return runApi(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (!command) usage("Run 'outlook --help' for usage.");
   throw new CliError(`Unknown command: ${command}. Run 'outlook --help' for usage.`, 2);

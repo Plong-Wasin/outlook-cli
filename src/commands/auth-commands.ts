@@ -68,8 +68,8 @@ async function graph(ctx: Context, method: string, path: string, options: GraphR
   try {
     response = await fetch(url, {
       method,
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...options.headers,
-        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json',
+        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }), ...options.headers },
       ...(options.body === undefined ? {} : { body: options.body }),
     });
   } catch {
