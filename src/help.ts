@@ -8,6 +8,9 @@ Commands:
   api        Call any Microsoft Graph endpoint
   draft      Create or update a Draft
   send       Send a new Message or saved Draft (requires --yes)
+  reply      Reply to a Message (--yes to send, --draft to save)
+  reply-all  Reply to all recipients (--yes to send, --draft to save)
+  forward    Forward a Message (--yes to send, --draft to save)
   mark       Mark Messages read or unread
   delete     Delete Messages (requires --yes)
   folders    List Mail folders
@@ -27,6 +30,9 @@ Commands and options:
   draft --update <id> [fields]
   send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] --yes
   send --draft <id> --yes
+  reply <id> --body <text> (--yes|--draft)
+  reply-all <id> --body <text> (--yes|--draft)
+  forward <id> --to <addresses> --body <text> (--yes|--draft)
   mark <id...> --read|--unread
   delete <id...> --yes
   folders [--cursor <cursor> | --all] [--json]

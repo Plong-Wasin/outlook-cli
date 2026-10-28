@@ -5,6 +5,7 @@ import { runReadCommand } from './commands/read-commands.js';
 import { runApi } from './commands/api-commands.js';
 import { runDraftCommand } from './commands/draft-commands.js';
 import { runSendCommand } from './commands/send-commands.js';
+import { runReplyForwardCommand } from './commands/reply-forward-commands.js';
 import { runWriteCommand } from './commands/write-commands.js';
 import { CliError, usage } from './utils/errors.js';
 
@@ -36,6 +37,9 @@ async function main(args: string[]): Promise<void> {
   if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'draft') return runDraftCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'send') return runSendCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'reply' || command === 'reply-all' || command === 'forward') {
+    return runReplyForwardCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  }
   if (command === 'mark' || command === 'delete') return runWriteCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command && ['me', 'folders', 'messages', 'contacts', 'users', 'groups', 'members'].includes(command)) return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'message') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
