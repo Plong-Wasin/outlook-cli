@@ -35,7 +35,7 @@ async function main(args: string[]): Promise<void> {
   if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'draft') return runDraftCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'mark' || command === 'delete') return runWriteCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'me' || command === 'folders' || command === 'messages') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command && ['me', 'folders', 'messages', 'contacts', 'users', 'groups', 'members'].includes(command)) return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (command === 'message') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
   if (!command) usage("Run 'outlook --help' for usage.");
   throw new CliError(`Unknown command: ${command}. Run 'outlook --help' for usage.`, 2);

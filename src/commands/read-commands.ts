@@ -29,6 +29,14 @@ interface ReadCollection<T> {
   nextLink?: string;
 }
 
+interface DirectoryPerson {
+  id?: string;
+  displayName?: string;
+  mail?: string;
+  userPrincipalName?: string;
+  emailAddresses?: Array<{ address?: string }>;
+}
+
 const ALL_PAGE_CAP = 100;
 
 function table(headers: string[], rows: string[][]): string {
@@ -39,6 +47,7 @@ function table(headers: string[], rows: string[][]): string {
 
 export async function runReadCommand(ctx: Context, command: string, args: string[]): Promise<void> {
   if (command === 'message') return readMessage(ctx, args);
+  if (['contacts', 'users', 'groups', 'members'].includes(command)) return readDirectory(ctx, command, args);
   let response: unknown;
   let rows: unknown[] | undefined;
   let nextLink: string | undefined;
@@ -209,4 +218,30 @@ function messageId(input: string): string {
   }
   if (!/^[A-Za-z0-9_+\/=\-]+$/.test(id)) usage('Invalid Message id. Use a Graph id or Outlook on the web URL.');
   return id;
+}
+
+async function readDirectory(ctx: Context, command: string, args: string[]): Promise<void> {
+  let path: string;
+  if (command === 'contacts') path = '/me/contacts';
+  else if (command === 'users') path = '/users';
+  else if (command === 'groups') path = '/groups';
+  else {
+    const group = args[0];
+    if (!group || group.startsWith('-')) usage("A group id is required. Usage: 'outlook members <group>'.");
+    path = `/groups/${encodeURIComponent(group)}/members`;
+  }
+  const top = option(args, '--top') ?? '25';
+  if (!/^\d+$/.test(top) || Number(top) < 1 || Number(top) > 999) usage("Option '--top' must be an integer from 1 to 999.");
+  const result = await readCollection<DirectoryPerson>(ctx, path, args, new URLSearchParams({ $top: top }));
+  if (args.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(result.response, null, 2)}\n`);
+    printContinuation(result.nextLink);
+    return;
+  }
+  process.stdout.write(table(['ID', 'NAME', 'EMAIL'], result.items.map((item) => [
+    item.id ?? '',
+    item.displayName ?? '',
+    item.mail ?? item.userPrincipalName ?? item.emailAddresses?.[0]?.address ?? '',
+  ])));
+  printContinuation(result.nextLink);
 }
