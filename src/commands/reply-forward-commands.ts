@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
 import { messageId } from '../utils/message-id.js';
+import { bodyContent } from '../utils/compose.js';
 
 type ReplyCommand = 'reply' | 'reply-all' | 'forward';
 
@@ -42,19 +42,13 @@ function parseArgs(command: ReplyCommand, args: string[]): ReplyOptions {
 
 export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand, args: string[]): Promise<void> {
   const options = parseArgs(command, args);
-  if (!options.draft && !options.yes) usage(`Refusing to ${command} without '--yes' or '--draft'.`);
   const id = messageId(options.id!);
+  if (!options.draft && !options.yes) {
+    process.stdout.write(`Would ${command} Message #${id}${options.to ? ` to ${options.to}` : ''}\n`);
+    usage(`Refusing to ${command} without '--yes' or '--draft'.`);
+  }
   const input = options.body!;
-  let comment: string;
-  if (input === '-') {
-    comment = '';
-    for await (const chunk of process.stdin) comment += chunk.toString();
-  } else if (input.startsWith('@')) {
-    const path = input.slice(1);
-    if (!path) usage("Option '--body @file' requires a file path.");
-    try { comment = readFileSync(path, 'utf8'); }
-    catch { usage(`Cannot read body file '${path}'. Check the file path and permissions.`); }
-  } else comment = input;
+  const comment = await bodyContent(input);
   const operation = command === 'reply-all' ? 'replyAll' : command;
   const action = options.draft ? `create${operation[0]!.toUpperCase()}${operation.slice(1)}` : operation;
   const recipients = options.to?.split(',').map((address) => address.trim()).filter(Boolean).map((address) => ({ emailAddress: { address } }));

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
+import { validateContinuation } from '../utils/graph-page.js';
 
 export async function runApi(ctx: Context, args: string[]): Promise<void> {
   const method = args[0]?.toUpperCase();
@@ -55,13 +56,8 @@ async function collectPages(ctx: Context, initial: unknown): Promise<unknown> {
   delete result['@odata.nextLink'];
   let nextLink = initial['@odata.nextLink'];
   for (let page = 1; typeof nextLink === 'string' && page < 50; page += 1) {
+    validateContinuation(nextLink, ctx);
     const nextUrl = new URL(nextLink);
-    const base = new URL(ctx.env.OUTLOOK_GRAPH_URL || 'https://graph.microsoft.com/v1.0');
-    const basePath = base.pathname.replace(/\/$/, '');
-    const inBasePath = !basePath || nextUrl.pathname === basePath || nextUrl.pathname.startsWith(`${basePath}/`);
-    if (nextUrl.origin !== base.origin || !inBasePath) {
-      usage('Graph returned a continuation URL outside the configured Graph URL.');
-    }
     const data = await graphRequest(ctx, 'GET', nextUrl.pathname, { rawUrl: nextUrl.href });
     if (!isCollection(data)) break;
     values.push(...data.value);

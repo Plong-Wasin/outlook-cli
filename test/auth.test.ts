@@ -90,3 +90,71 @@ it('selects Profiles, checks identity, masks credentials, and logs out only that
   assert.equal(saved.profiles.backup?.accessToken, undefined);
   assert.equal(saved.profiles.primary?.accessToken, 'primary-token');
 });
+
+function reply(status: number, body: unknown, headers: Record<string, string> = {}): (request: unknown, response: import('node:http').ServerResponse) => void {
+  return (_request, response) => { response.writeHead(status, { 'Content-Type': 'application/json', ...headers }); response.end(JSON.stringify(body)); };
+}
+
+it('refreshes an expired access token before the request and rewrites the config privately', async () => {
+  setConfig({ defaultProfile: 'default', profiles: { default: { accessToken: 'old-access', refreshToken: 'old-refresh', expiresAt: Date.now() - 1000, clientId: 'test-client' } } });
+  servers.login.reset(); servers.graph.reset();
+  servers.login.setReply(reply(200, { access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 3600 }));
+  servers.graph.setReply(reply(200, { displayName: 'Outlook User' }));
+  const result = await cli.run(['me']);
+  assert.equal(result.code, 0, result.stderr);
+  const form = new URLSearchParams(servers.login.requests[0]!.body);
+  assert.equal(form.get('grant_type'), 'refresh_token');
+  assert.equal(form.get('refresh_token'), 'old-refresh');
+  assert.equal(servers.graph.requests[0]!.headers.authorization, 'Bearer new-access');
+  const saved = JSON.parse(readFileSync(`${cli.home}/config.json`, 'utf8'));
+  assert.equal(saved.profiles.default.refreshToken, 'new-refresh');
+  assert.equal(statSync(`${cli.home}/config.json`).mode & 0o777, 0o600);
+});
+
+it('refreshes once after a 401 and retries, then gives up on a second 401', async () => {
+  setConfig({ profiles: { default: { accessToken: 'stale', refreshToken: 'refresh', expiresAt: Date.now() + 3_600_000 } } });
+  servers.login.reset(); servers.graph.reset();
+  servers.login.setReply(reply(200, { access_token: 'fresh', expires_in: 3600 }));
+  let calls = 0;
+  servers.graph.setReply((request, response) => {
+    calls += 1;
+    if (request.headers.authorization === 'Bearer fresh') reply(200, { displayName: 'Outlook User' })(request, response);
+    else reply(401, { error: 'expired' })(request, response);
+  });
+  const ok = await cli.run(['me']);
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.equal(calls, 2);
+  assert.equal(servers.login.requests.length, 1);
+
+  setConfig({ profiles: { default: { accessToken: 'stale', refreshToken: 'refresh', expiresAt: Date.now() + 3_600_000 } } });
+  servers.login.reset(); servers.graph.reset();
+  servers.graph.setReply(reply(401, { error: 'expired' }));
+  const failed = await cli.run(['me']);
+  assert.equal(failed.code, 1);
+  assert.match(failed.stderr, /Authentication failed for GET \/me/);
+  assert.equal(servers.graph.requests.length, 2);
+});
+
+it('reports an expired sign-in when the refresh token is rejected', async () => {
+  setConfig({ profiles: { default: { accessToken: 'old', refreshToken: 'bad', expiresAt: Date.now() - 1000 } } });
+  servers.login.reset(); servers.graph.reset();
+  servers.login.setReply(reply(400, { error: 'invalid_grant' }));
+  const result = await cli.run(['me']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Sign-in expired/);
+  assert.equal(servers.graph.requests.length, 0);
+});
+
+it('retries a 429 and succeeds when the next attempt is 200', async () => {
+  setConfig({ profiles: { default: { accessToken: 'token', expiresAt: Date.now() + 3_600_000 } } });
+  servers.graph.reset();
+  let calls = 0;
+  servers.graph.setReply((request, response) => {
+    calls += 1;
+    if (calls === 1) reply(429, { error: 'slow' }, { 'Retry-After': '0' })(request, response);
+    else reply(200, { displayName: 'Outlook User' })(request, response);
+  });
+  const result = await cli.run(['me']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(calls, 2);
+});

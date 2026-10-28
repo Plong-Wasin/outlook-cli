@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
+import { bodyContent, recipients } from '../utils/compose.js';
+import { messageId } from '../utils/message-id.js';
 
 interface DraftOptions {
   update?: string;
@@ -45,28 +46,6 @@ function parseArgs(args: string[]): DraftOptions {
   return options;
 }
 
-function recipients(values: string[] | undefined): Array<{ emailAddress: { address: string } }> | undefined {
-  if (!values) return undefined;
-  const addresses = values.flatMap((value) => value.split(',')).map((address) => address.trim()).filter(Boolean);
-  if (addresses.length === 0) usage('Recipient options must include at least one email address.');
-  return addresses.map((address) => ({ emailAddress: { address } }));
-}
-
-async function bodyContent(value: string): Promise<string> {
-  if (value === '-') {
-    let body = '';
-    for await (const chunk of process.stdin) body += chunk.toString();
-    return body;
-  }
-  if (value.startsWith('@')) {
-    const path = value.slice(1);
-    if (!path) usage("Option '--body @file' requires a file path.");
-    try { return readFileSync(path, 'utf8'); }
-    catch { usage(`Cannot read body file '${path}'. Check the file path and permissions.`); }
-  }
-  return value;
-}
-
 export async function runDraftCommand(ctx: Context, args: string[]): Promise<void> {
   const options = parseArgs(args);
   const body = options.body === undefined ? undefined : {
@@ -81,7 +60,7 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
     ...(body === undefined ? {} : { body }),
   };
   const method = options.update === undefined ? 'POST' : 'PATCH';
-  const path = options.update === undefined ? '/me/messages' : `/me/messages/${encodeURIComponent(options.update)}`;
+  const path = options.update === undefined ? '/me/messages' : `/me/messages/${encodeURIComponent(messageId(options.update))}`;
   const response = await graphRequest(ctx, method, path, { body: JSON.stringify(patch) });
   if (options.update === undefined) {
     const id = (response as { id?: string } | undefined)?.id;

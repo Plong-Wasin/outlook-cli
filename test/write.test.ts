@@ -22,7 +22,7 @@ it('previews deletion without --yes and sends no request', async () => {
 
 it('marks Messages read or unread with one PATCH per id', async () => {
   servers.graph.setReply((_request, response) => { response.writeHead(204).end(); });
-  const result = await cli.run(['mark', 'message-one', 'message-two', '--unread', '--yes']);
+  const result = await cli.run(['mark', 'message-one', 'message-two', '--unread']);
   assert.equal(result.code, 0, result.stderr);
   assert.deepEqual(servers.graph.requests.map(({ method, path, body }) => [method, path, JSON.parse(body)]), [
     ['PATCH', '/me/messages/message-one', { isRead: false }],
@@ -30,7 +30,7 @@ it('marks Messages read or unread with one PATCH per id', async () => {
   ]);
 
   servers.graph.reset();
-  const read = await cli.run(['mark', 'message-three', '--read', '--yes']);
+  const read = await cli.run(['mark', 'message-three', '--read']);
   assert.equal(read.code, 0, read.stderr);
   assert.deepEqual(JSON.parse(servers.graph.requests[0]!.body), { isRead: true });
 });
@@ -53,7 +53,7 @@ it('continues bulk deletion after a failure and reports the failed id and count'
 
 it('rejects --json for every write command without sending a request', async () => {
   for (const args of [
-    ['mark', 'message-one', '--read', '--yes', '--json'],
+    ['mark', 'message-one', '--read', '--json'],
     ['delete', 'message-one', '--yes', '--json'],
   ]) {
     const result = await cli.run(args);
@@ -70,4 +70,23 @@ it('marks without --yes because the change is reversible', async () => {
   assert.equal(result.code, 0, result.stderr);
   assert.equal(servers.graph.requests.length, 1);
   assert.equal(servers.graph.requests[0]!.method, 'PATCH');
+});
+
+it('rejects --yes for mark and prints the intended action when reply is refused', async () => {
+  servers.graph.reset();
+  const mark = await cli.run(['mark', 'message-one', '--read', '--yes']);
+  assert.equal(mark.code, 2);
+  const reply = await cli.run(['reply', 'message-one', '--body', 'hi']);
+  assert.equal(reply.code, 2);
+  assert.match(reply.stdout, /Would reply Message #message-one/);
+  assert.equal(servers.graph.requests.length, 0);
+});
+
+it('rejects --json for send, draft, reply, reply-all, and forward without sending', async () => {
+  servers.graph.reset();
+  for (const args of [['send', '--to', 'a@example.test', '--yes', '--json'], ['draft', '--to', 'a@example.test', '--json'], ['reply', 'message-one', '--body', 'x', '--yes', '--json'], ['reply-all', 'message-one', '--body', 'x', '--yes', '--json'], ['forward', 'message-one', '--to', 'a@example.test', '--body', 'x', '--yes', '--json']]) {
+    const result = await cli.run(args);
+    assert.equal(result.code, 2, args[0]);
+  }
+  assert.equal(servers.graph.requests.length, 0);
 });

@@ -1,6 +1,7 @@
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
 import { messageId } from '../utils/message-id.js';
+import { graphPage, validateContinuation } from '../utils/graph-page.js';
 import { resolveMailFolderId } from '../utils/mail-folders.js';
 
 interface Message {
@@ -94,14 +95,14 @@ export async function runReadCommand(ctx: Context, command: string, args: string
   printContinuation(nextLink);
 }
 
-async function readCollection<T>(ctx: Context, path: string, args: string[], query?: URLSearchParams): Promise<ReadCollection<T>> {
+async function readCollection<T>(ctx: Context, path: string, args: string[], query?: URLSearchParams, headers?: Record<string, string>): Promise<ReadCollection<T>> {
   const token = option(args, '--cursor');
   let url = token ? decodeCursor(token, ctx) : withQuery(path, query);
   const all = args.includes('--all');
   const pages: Collection<T>[] = [];
   let nextLink: string | undefined;
   for (let page = 0; page < (all ? ALL_PAGE_CAP : 1); page += 1) {
-    const result = await graphPage(ctx, url) as Collection<T>;
+    const result = await graphPage(ctx, url, headers) as Collection<T>;
     pages.push(result);
     nextLink = result['@odata.nextLink'];
     if (!all || !nextLink) break;
@@ -146,22 +147,6 @@ function messageQuery(args: string[]): URLSearchParams {
 
 function withQuery(path: string, query?: URLSearchParams): string {
   return query && [...query].length ? `${path}?${query.toString()}` : path;
-}
-
-function graphPage(ctx: Context, url: string): Promise<unknown> {
-  return /^https?:\/\//i.test(url)
-    ? graphRequest(ctx, 'GET', url, { rawUrl: url })
-    : graphRequest(ctx, 'GET', url);
-}
-
-function validateContinuation(link: string, ctx: Context): void {
-  let url: URL;
-  try { url = new URL(link, ctx.env.OUTLOOK_GRAPH_URL || 'https://graph.microsoft.com/v1.0'); }
-  catch { usage('Graph returned an invalid continuation URL.'); }
-  const base = new URL(ctx.env.OUTLOOK_GRAPH_URL || 'https://graph.microsoft.com/v1.0');
-  const basePath = base.pathname.replace(/\/$/, '');
-  const inBasePath = !basePath || url.pathname === basePath || url.pathname.startsWith(`${basePath}/`);
-  if (url.origin !== base.origin || !inBasePath) usage('Graph returned a continuation URL outside the configured Graph URL.');
 }
 
 function decodeCursor(token: string, ctx: Context): string {
@@ -216,7 +201,14 @@ async function readDirectory(ctx: Context, command: string, args: string[]): Pro
   }
   const top = option(args, '--top') ?? '25';
   if (!/^\d+$/.test(top) || Number(top) < 1 || Number(top) > 999) usage("Option '--top' must be an integer from 1 to 999.");
-  const result = await readCollection<DirectoryPerson>(ctx, path, args, new URLSearchParams({ $top: top }));
+  const query = new URLSearchParams({ $top: top });
+  const search = option(args, '--search');
+  if (search) {
+    if (command !== 'users') usage("Option '--search' is only supported by 'users'.");
+    query.set('$search', `"displayName:${search.replaceAll('"', '\\"')}"`);
+  }
+  // Directory $search needs advanced-query consistency.
+  const result = await readCollection<DirectoryPerson>(ctx, path, args, query, search ? { ConsistencyLevel: 'eventual' } : undefined);
   if (args.includes('--json')) {
     process.stdout.write(`${JSON.stringify(result.response, null, 2)}\n`);
     printContinuation(result.nextLink);

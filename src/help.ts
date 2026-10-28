@@ -18,7 +18,7 @@ Commands:
   messages   List Messages in Inbox or another Mail folder
   message    Read one Message by id or Outlook URL
   contacts   List your Contacts
-  users      List directory Users
+  users      List or search directory Users
   groups     List Groups
   members    List a Group's members
 
@@ -40,7 +40,8 @@ Commands and options:
   messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
            [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
   message <id|url> [--html] [--json]
-  contacts | users | groups [--top N] [--cursor CURSOR] [--all] [--json]
+  contacts | groups [--top N] [--cursor CURSOR] [--all] [--json]
+  users [--search <text>] [--top N] [--cursor CURSOR] [--all] [--json]
   members <group> [--top N] [--cursor CURSOR] [--all] [--json]
 
 Global options:

@@ -43,7 +43,7 @@ outlook messages [--folder <name|id>] [--unread] [--from <address>] [--since <da
 # --search cannot be combined with --unread, --from, or --since (Graph limit); --folder accepts well-known names such as archive, sentitems
 outlook message <id|url> [--html] [--json]
 outlook contacts [--top N] [--cursor CURSOR] [--all] [--json]
-outlook users [--top N] [--cursor CURSOR] [--all] [--json]
+outlook users [--search <text>] [--top N] [--cursor CURSOR] [--all] [--json]
 outlook groups [--top N] [--cursor CURSOR] [--all] [--json]
 outlook members <group> [--top N] [--cursor CURSOR] [--all] [--json]
 outlook api GET <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]

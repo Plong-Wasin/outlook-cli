@@ -76,3 +76,15 @@ it('prints raw directory JSON and follows continuation links with --cursor and -
   assert.deepEqual(JSON.parse(all.stdout), { value: [{ id: 'user-1', displayName: 'Ada' }, { id: 'user-2', displayName: 'Grace' }] });
   assert.deepEqual(servers.graph.requests.map(({ path }) => path), ['/users?%24top=25', '/users?$skiptoken=next-page']);
 });
+
+it('searches Users by display name with advanced-query consistency', async () => {
+  servers.graph.reset();
+  servers.graph.setReply((_request, response) => { response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ value: [] })); });
+  const result = await cli.run(['users', '--search', 'grace']);
+  assert.equal(result.code, 0, result.stderr);
+  const request = servers.graph.requests[0]!;
+  assert.equal(new URL(`http://x${request.path}`).searchParams.get('$search'), '"displayName:grace"');
+  assert.equal(request.headers.consistencylevel, 'eventual');
+  const refused = await cli.run(['groups', '--search', 'x']);
+  assert.equal(refused.code, 2);
+});

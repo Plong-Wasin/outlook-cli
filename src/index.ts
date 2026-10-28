@@ -10,6 +10,8 @@ import { runReplyForwardCommand } from './commands/reply-forward-commands.js';
 import { runWriteCommand } from './commands/write-commands.js';
 import { CliError, usage } from './utils/errors.js';
 
+const READ_COMMANDS = ['me', 'folders', 'messages', 'message', 'contacts', 'users', 'groups', 'members'];
+
 function globals(args: string[]): { options: GlobalOptions; rest: string[] } {
   const options: GlobalOptions = {}; const rest: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -33,20 +35,16 @@ async function main(args: string[]): Promise<void> {
     process.stdout.write(`${HELP}\n`); return;
   }
   const { options, rest } = globals(args);
-  const [command, subcommand, ...commandArgs] = rest;
+  const [command, ...commandArgs] = rest;
   const ctx = selectedContext(process.env, options);
-  if (command === 'auth') return runAuth(ctx, subcommand);
-  if (command === 'config') return runConfig(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'api') return runApi(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'me') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'draft') return runDraftCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'send') return runSendCommand(ctx, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'reply' || command === 'reply-all' || command === 'forward') {
-    return runReplyForwardCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  }
-  if (command === 'mark' || command === 'delete') return runWriteCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command && ['me', 'folders', 'messages', 'contacts', 'users', 'groups', 'members'].includes(command)) return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
-  if (command === 'message') return runReadCommand(ctx, command, [subcommand, ...commandArgs].filter((value): value is string => value !== undefined));
+  if (command === 'auth') return runAuth(ctx, commandArgs[0]);
+  if (command === 'config') return runConfig(ctx, commandArgs);
+  if (command === 'api') return runApi(ctx, commandArgs);
+  if (command === 'draft') return runDraftCommand(ctx, commandArgs);
+  if (command === 'send') return runSendCommand(ctx, commandArgs);
+  if (command === 'reply' || command === 'reply-all' || command === 'forward') return runReplyForwardCommand(ctx, command, commandArgs);
+  if (command === 'mark' || command === 'delete') return runWriteCommand(ctx, command, commandArgs);
+  if (command && READ_COMMANDS.includes(command)) return runReadCommand(ctx, command, commandArgs);
   if (!command) usage("Run 'outlook --help' for usage.");
   throw new CliError(`Unknown command: ${command}. Run 'outlook --help' for usage.`, 2);
 }

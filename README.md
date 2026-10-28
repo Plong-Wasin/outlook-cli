@@ -43,7 +43,7 @@ Run `outlook --help` for the concise reference and `outlook --version` to check 
 | `messages [--folder <name\|id>] [--unread] [--from <address>] [--since <date>] [--search <text>] [--top <count>] [--cursor <cursor> \| --all] [--json]` | List newest Messages, Inbox by default. `--search` cannot be combined with `--unread`, `--from`, or `--since`; `--folder` also accepts Graph well-known names such as `archive` and `sentitems`. |
 | `message <id\|url> [--html] [--json]` | Read one Message as plain text, or HTML with `--html`. |
 | `contacts [--top N] [--cursor CURSOR] [--all] [--json]` | List Contacts. |
-| `users [--top N] [--cursor CURSOR] [--all] [--json]` | Search directory Users. |
+| `users [--search <text>] [--top N] [--cursor CURSOR] [--all] [--json]` | Search directory Users. |
 | `groups [--top N] [--cursor CURSOR] [--all] [--json]` | List Groups. |
 | `members <group> [--top N] [--cursor CURSOR] [--all] [--json]` | List members of a Group. |
 | `mark <id...> --read\|--unread` | Mark Messages read or unread. **Writes mailbox data.** |

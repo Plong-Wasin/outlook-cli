@@ -38,7 +38,11 @@ export async function runWriteCommand(ctx: Context, command: 'mark' | 'delete', 
 function parseOptions(command: 'mark' | 'delete', args: string[]): WriteOptions {
   const options: WriteOptions = { ids: [], yes: false };
   for (const arg of args) {
-    if (arg === '--yes') { options.yes = true; continue; }
+    if (arg === '--yes') {
+      if (command === 'mark') usage("Option '--yes' is not accepted by 'mark'; marking is reversible.");
+      options.yes = true;
+      continue;
+    }
     if (arg === '--json') usage("Option '--json' is only supported by read commands.");
     if (command === 'mark' && (arg === '--read' || arg === '--unread')) {
       if (options.isRead !== undefined) usage("Choose either '--read' or '--unread', not both.");

@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
+import { bodyContent, recipients, type Recipient } from '../utils/compose.js';
+import { messageId } from '../utils/message-id.js';
 
 interface SendOptions {
   draft?: string;
@@ -51,29 +52,6 @@ function parseArgs(args: string[]): SendOptions {
   return options;
 }
 
-type Recipient = { emailAddress: { address: string } };
-function recipients(values: string[] | undefined): Recipient[] | undefined {
-  if (!values) return undefined;
-  const addresses = values.flatMap((value) => value.split(',')).map((address) => address.trim()).filter(Boolean);
-  if (addresses.length === 0) usage('Recipient options must include at least one email address.');
-  return addresses.map((address) => ({ emailAddress: { address } }));
-}
-
-async function bodyContent(value: string): Promise<string> {
-  if (value === '-') {
-    let body = '';
-    for await (const chunk of process.stdin) body += chunk.toString();
-    return body;
-  }
-  if (value.startsWith('@')) {
-    const path = value.slice(1);
-    if (!path) usage("Option '--body @file' requires a file path.");
-    try { return readFileSync(path, 'utf8'); }
-    catch { usage(`Cannot read body file '${path}'. Check the file path and permissions.`); }
-  }
-  return value;
-}
-
 interface MessageSummary {
   toRecipients?: Recipient[];
   ccRecipients?: Recipient[];
@@ -92,7 +70,7 @@ function preview(message: MessageSummary): void {
 export async function runSendCommand(ctx: Context, args: string[]): Promise<void> {
   const options = parseArgs(args);
   if (options.draft !== undefined) {
-    const id = options.draft;
+    const id = messageId(options.draft);
     if (!options.yes) {
       const summary = await graphRequest(ctx, 'GET', `/me/messages/${encodeURIComponent(id)}`, {
         query: new URLSearchParams({ '$select': 'toRecipients,ccRecipients,bccRecipients,subject' }),
