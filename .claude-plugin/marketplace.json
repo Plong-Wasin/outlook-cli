@@ -1,0 +1,14 @@
+{
+  "name": "outlook-cli",
+  "description": "Outlook CLI agent skills",
+  "owner": {
+    "name": "Outlook CLI maintainers"
+  },
+  "plugins": [
+    {
+      "name": "outlook-cli",
+      "source": "./plugins/outlook-cli",
+      "description": "Read and manage Outlook Messages with the outlook command-line client"
+    }
+  ]
+}

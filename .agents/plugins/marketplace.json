@@ -1,0 +1,20 @@
+{
+  "name": "outlook-cli",
+  "interface": {
+    "displayName": "Outlook CLI"
+  },
+  "plugins": [
+    {
+      "name": "outlook-cli",
+      "source": {
+        "source": "local",
+        "path": "./plugins/outlook-cli"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
