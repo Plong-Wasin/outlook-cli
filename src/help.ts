@@ -9,6 +9,7 @@ Commands:
   draft      Create or update a Draft
   folders    List Mail folders
   messages   List Messages in Inbox or another Mail folder
+  message    Read one Message by id or Outlook URL
 
 Commands and options:
   auth login | check | logout
@@ -20,6 +21,7 @@ Commands and options:
   folders [--cursor <cursor> | --all] [--json]
   messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
            [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
+  message <id|url> [--html] [--json]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
