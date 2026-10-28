@@ -8,9 +8,15 @@ Commands:
   api        Call any Microsoft Graph endpoint
   draft      Create or update a Draft
   send       Send a new Message or saved Draft (requires --yes)
+  mark       Mark Messages read or unread
+  delete     Delete Messages (requires --yes)
   folders    List Mail folders
   messages   List Messages in Inbox or another Mail folder
   message    Read one Message by id or Outlook URL
+  contacts   List your Contacts
+  users      List directory Users
+  groups     List Groups
+  members    List a Group's members
 
 Commands and options:
   auth login | check | logout
@@ -21,10 +27,14 @@ Commands and options:
   draft --update <id> [fields]
   send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] --yes
   send --draft <id> --yes
+  mark <id...> --read|--unread --yes
+  delete <id...> [--yes]
   folders [--cursor <cursor> | --all] [--json]
   messages [--folder <name|id>] [--unread] [--from <address>] [--since <date>]
            [--search <text>] [--top <count>] [--cursor <cursor> | --all] [--json]
   message <id|url> [--html] [--json]
+  contacts | users | groups [--top N] [--cursor CURSOR] [--all] [--json]
+  members <group> [--top N] [--cursor CURSOR] [--all] [--json]
 
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
