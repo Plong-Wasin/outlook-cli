@@ -1,3 +1,4 @@
+import pkg from '../package.json' with { type: 'json' };
 import { HELP } from './help.js';
 import { runAuth, selectedContext, type GlobalOptions } from './commands/auth-commands.js';
 import { runConfig } from './commands/config-commands.js';
@@ -25,6 +26,9 @@ function globals(args: string[]): { options: GlobalOptions; rest: string[] } {
   return { options, rest };
 }
 async function main(args: string[]): Promise<void> {
+  if (args.length === 1 && args[0] === '--version') {
+    process.stdout.write(`outlook ${pkg.version}\n`); return;
+  }
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     process.stdout.write(`${HELP}\n`); return;
   }

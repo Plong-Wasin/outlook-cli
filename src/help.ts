@@ -1,5 +1,6 @@
 export const HELP = `Usage: outlook <command> [options]
        outlook --help
+       outlook --version
 
 Commands:
   auth       Sign in and manage Profiles
@@ -46,6 +47,7 @@ Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
   --client-id <id>      Override the OAuth client id (or set OUTLOOK_CLIENT_ID)
   -h, --help            Show help
+      --version         Show the installed version
 
 Environment:
   OUTLOOK_PROFILE, OUTLOOK_TOKEN, OUTLOOK_CLIENT_ID, OUTLOOK_CONFIG

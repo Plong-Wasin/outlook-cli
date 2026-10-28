@@ -1,0 +1,9 @@
+{
+  "name": "outlook-cli",
+  "description": "Read and manage Outlook Messages with the outlook command-line client",
+  "displayName": "Outlook CLI",
+  "shortDescription": "Read and manage Outlook Messages with outlook",
+  "developerName": "Outlook CLI maintainers",
+  "category": "Developer Tools",
+  "license": "MIT"
+}

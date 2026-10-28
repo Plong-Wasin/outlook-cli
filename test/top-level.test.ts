@@ -10,3 +10,9 @@ it('prints help without credentials and reports unknown commands as usage errors
   for (const item of ['config show', 'me', '--profile', '--client-id', 'OUTLOOK_TOKEN']) assert.ok(help.stdout.includes(item));
   const unknown = await cli.run(['nope']); assert.equal(unknown.code, 2); assert.match(unknown.stderr, /^outlook: /);
 });
+it('prints its package version without credentials', async () => {
+  const result = await cli.run(['--version']);
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, 'outlook 0.1.0\n');
+  assert.equal(result.stderr, '');
+});
