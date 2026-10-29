@@ -2,9 +2,9 @@ import { CliError, usage } from '../utils/errors.js';
 import { configPath, loadConfig, saveConfig, type Config, type Profile } from '../utils/config.js';
 
 const DEFAULT_CLIENT_ID = '14d82eec-204b-4c2f-b7e8-296a70dab67e';
-const SCOPES = 'Mail.ReadWrite Mail.Send Contacts.Read User.ReadBasic.All Group.Read.All offline_access';
+const DEFAULT_SCOPES = 'Mail.ReadWrite Mail.Send Contacts.Read User.ReadBasic.All Group.Read.All offline_access';
 
-export interface GlobalOptions { profile?: string; clientId?: string }
+export interface GlobalOptions { profile?: string; clientId?: string; scopes?: string }
 export interface Context {
   env: NodeJS.ProcessEnv; options: GlobalOptions; config: Config; path: string;
   profileName: string; profile: Profile;
@@ -21,6 +21,11 @@ function persist(ctx: Context): void {
   ctx.config.defaultProfile ??= ctx.profileName;
   saveConfig(ctx.path, ctx.config);
 }
+function explicitScopes(ctx: Context): string | undefined {
+  const value = ctx.options.scopes || ctx.env.OUTLOOK_SCOPES;
+  return value ? value.split(/[\s,]+/).filter(Boolean).join(' ') : undefined;
+}
+function scopesFor(ctx: Context): string { return explicitScopes(ctx) || ctx.profile.scopes || DEFAULT_SCOPES; }
 function clientIdFor(ctx: Context): string {
   return ctx.options.clientId || ctx.env.OUTLOOK_CLIENT_ID || ctx.profile.clientId || DEFAULT_CLIENT_ID;
 }
@@ -44,7 +49,7 @@ async function refresh(ctx: Context): Promise<void> {
   try {
     response = await fetch(tokenEndpoint(ctx), {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientIdFor(ctx), grant_type: 'refresh_token', refresh_token: ctx.profile.refreshToken, scope: SCOPES }),
+      body: new URLSearchParams({ client_id: clientIdFor(ctx), grant_type: 'refresh_token', refresh_token: ctx.profile.refreshToken, scope: scopesFor(ctx) }),
     });
   } catch {
     throw new CliError("Could not refresh sign-in. Run 'outlook auth login' to sign in again.");
@@ -129,7 +134,7 @@ async function login(ctx: Context): Promise<void> {
   try {
     deviceResponse = await fetch(deviceUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientId, scope: SCOPES }),
+      body: new URLSearchParams({ client_id: clientId, scope: scopesFor(ctx) }),
     });
   } catch { throw new CliError(`Cannot reach ${deviceUrl}. Check the login URL and network.`); }
   const device = await deviceResponse.json() as DeviceCode;
@@ -145,6 +150,7 @@ async function login(ctx: Context): Promise<void> {
     const data = await response.json() as TokenResponse;
     if (response.ok && data.access_token) {
       ctx.profile.accessToken = data.access_token; ctx.profile.refreshToken = data.refresh_token;
+      ctx.profile.scopes = explicitScopes(ctx) ?? ctx.profile.scopes;
       ctx.profile.clientId = clientId; ctx.profile.expiresAt = Date.now() + (data.expires_in ?? 3600) * 1000;
       persist(ctx);
       process.stdout.write(`Signed in to Profile '${ctx.profileName}'.\n`);

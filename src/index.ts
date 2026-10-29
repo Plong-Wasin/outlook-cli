@@ -16,13 +16,14 @@ function globals(args: string[]): { options: GlobalOptions; rest: string[] } {
   const options: GlobalOptions = {}; const rest: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
-    if (arg === '-p' || arg === '--profile' || arg === '--client-id') {
+    if (arg === '-p' || arg === '--profile' || arg === '--client-id' || arg === '--scopes') {
       const value = args[index + 1];
       if (!value || value.startsWith('-')) usage(`Option '${arg}' requires a value.`);
-      if (arg === '--client-id') options.clientId = value; else options.profile = value;
+      if (arg === '--client-id') options.clientId = value; else if (arg === '--scopes') options.scopes = value; else options.profile = value;
       index += 1;
     } else if (arg.startsWith('--profile=')) options.profile = arg.slice('--profile='.length);
     else if (arg.startsWith('--client-id=')) options.clientId = arg.slice('--client-id='.length);
+    else if (arg.startsWith('--scopes=')) options.scopes = arg.slice('--scopes='.length);
     else rest.push(arg);
   }
   return { options, rest };

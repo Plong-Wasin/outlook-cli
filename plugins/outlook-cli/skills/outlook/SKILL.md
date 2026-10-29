@@ -77,7 +77,7 @@ Raw API requests accept `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`; `--all` fol
 
 ## Profiles and environment
 
-`-p` or `OUTLOOK_PROFILE` selects a Profile. `--client-id` overrides `OUTLOOK_CLIENT_ID`. `OUTLOOK_CONFIG` selects another config file. `OUTLOOK_GRAPH_URL` and `OUTLOOK_LOGIN_URL` point to alternate services and are intended for tests. A command-line flag takes precedence over environment values, which take precedence over Profile defaults.
+`-p` or `OUTLOOK_PROFILE` selects a Profile. `--client-id` overrides `OUTLOOK_CLIENT_ID`. `--scopes` overrides `OUTLOOK_SCOPES` and is saved in the Profile on `auth login`. `OUTLOOK_CONFIG` selects another config file. `OUTLOOK_GRAPH_URL` and `OUTLOOK_LOGIN_URL` point to alternate services and are intended for tests. A command-line flag takes precedence over environment values, which take precedence over Profile defaults.
 
 ## Exit codes
 

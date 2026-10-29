@@ -26,7 +26,7 @@ outlook -p work auth login
 outlook -p personal messages
 ```
 
-`OUTLOOK_PROFILE` selects a Profile. `OUTLOOK_TOKEN` provides a bearer token for headless use without a Profile. `--client-id` or `OUTLOOK_CLIENT_ID` overrides the OAuth client id. `OUTLOOK_CONFIG` selects another config file. `OUTLOOK_GRAPH_URL` and `OUTLOOK_LOGIN_URL` can point to alternate services, such as test servers. Flags take precedence over environment values, which take precedence over Profile defaults.
+`OUTLOOK_PROFILE` selects a Profile. `OUTLOOK_TOKEN` provides a bearer token for headless use without a Profile. `--client-id` or `OUTLOOK_CLIENT_ID` overrides the OAuth client id. `--scopes` or `OUTLOOK_SCOPES` sets the OAuth scopes requested at sign-in and is saved in the Profile on `auth login`, so token refresh keeps asking for the same scopes. Personal Microsoft accounts cannot grant `User.ReadBasic.All` or `Group.Read.All`; sign in with `outlook -p personal --scopes "Mail.ReadWrite Mail.Send Contacts.Read User.Read offline_access" auth login`. `OUTLOOK_CONFIG` selects another config file. `OUTLOOK_GRAPH_URL` and `OUTLOOK_LOGIN_URL` can point to alternate services, such as test servers. Flags take precedence over environment values, which take precedence over Profile defaults.
 
 ## Commands
 
