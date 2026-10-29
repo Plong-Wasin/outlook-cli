@@ -47,11 +47,12 @@ Commands and options:
 Global options:
   -p, --profile <name>  Select a Profile (or set OUTLOOK_PROFILE)
   --client-id <id>      Override the OAuth client id (or set OUTLOOK_CLIENT_ID)
+  --scopes <list>       OAuth scopes for sign-in, space or comma separated (or set OUTLOOK_SCOPES); saved in the Profile on login
   -h, --help            Show help
       --version         Show the installed version
 
 Environment:
-  OUTLOOK_PROFILE, OUTLOOK_TOKEN, OUTLOOK_CLIENT_ID, OUTLOOK_CONFIG
+  OUTLOOK_PROFILE, OUTLOOK_TOKEN, OUTLOOK_CLIENT_ID, OUTLOOK_SCOPES, OUTLOOK_CONFIG
   OUTLOOK_GRAPH_URL and OUTLOOK_LOGIN_URL (for alternate services and tests)
 
 Exit codes:

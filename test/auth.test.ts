@@ -56,6 +56,21 @@ it('logs in with device code and saves refresh credentials in a private config',
   assert.equal(statSync(`${cli.home}/config.json`).mode & 0o777, 0o600);
 });
 
+it('saves requested scopes in the Profile and reuses them when refreshing', async () => {
+  servers.login.reset();
+  const login = await cli.run(['auth', 'login', '-p', 'personal', '--client-id', 'test-client', '--scopes', 'Mail.ReadWrite,User.Read offline_access']);
+  assert.equal(login.code, 0, login.stderr);
+  assert.equal(new URLSearchParams(servers.login.requests[0]!.body).get('scope'), 'Mail.ReadWrite User.Read offline_access');
+  const config = JSON.parse(readFileSync(`${cli.home}/config.json`, 'utf8')) as { profiles: Record<string, { scopes?: string; refreshToken?: string }> };
+  assert.equal(config.profiles.personal?.scopes, 'Mail.ReadWrite User.Read offline_access');
+  setConfig({ defaultProfile: 'personal', profiles: { personal: { accessToken: 'old', refreshToken: 'old-refresh', expiresAt: Date.now() - 1000, clientId: 'test-client', scopes: 'Mail.ReadWrite User.Read offline_access' } } });
+  servers.login.reset(); graphReply();
+  const checked = await cli.run(['auth', 'check']);
+  assert.equal(checked.code, 0, checked.stderr);
+  const refresh = servers.login.requests.find((request) => request.path.endsWith('/token'))!;
+  assert.equal(new URLSearchParams(refresh.body).get('scope'), 'Mail.ReadWrite User.Read offline_access');
+});
+
 it('uses an environment token without a Profile and reports specific Graph failures', async () => {
   graphReply();
   const ok = await cli.run(['auth', 'check'], { OUTLOOK_TOKEN: 'headless-token' });

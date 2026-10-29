@@ -8,6 +8,7 @@ export interface Profile {
   refreshToken?: string;
   expiresAt?: number;
   clientId?: string;
+  scopes?: string;
 }
 export interface Config { defaultProfile?: string; profiles: Record<string, Profile> }
 
