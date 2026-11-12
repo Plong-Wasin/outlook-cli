@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, it } from 'node:test';
 import { createCli, type Cli } from './helpers/cli.ts';
 import { startFakeServers, type FakeServers } from './helpers/fake-server.ts';
@@ -56,12 +59,70 @@ it('shows saved Draft recipients and subject without sending when --yes is omitt
     response.end(JSON.stringify({
       toRecipients: [{ emailAddress: { address: 'person@example.test' } }],
       subject: 'Saved subject',
+      attachments: [{ name: 'a.txt' }],
     }));
   });
   const result = await cli.run(['send', '--draft', 'draft-123']);
   assert.equal(result.code, 2);
   assert.match(result.stdout, /person@example\.test/);
   assert.match(result.stdout, /Subject: Saved subject/);
+  assert.match(result.stdout, /Attachments: a\.txt/);
   assert.match(result.stderr, /--yes/);
-  assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject']]);
+  assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject&%24expand=attachments%28%24select%3Dname%29']]);
+});
+
+it('attaches files to a new Message as base64 fileAttachments', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'report.html');
+  writeFileSync(file, '<p>Hi</p>');
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--subject', 'Hello', '--body', 'See file', '--attach', file, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    const sent = JSON.parse(servers.graph.requests[0]!.body);
+    assert.deepEqual(sent.message.attachments, [{
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: 'report.html',
+      contentBytes: Buffer.from('<p>Hi</p>').toString('base64'),
+    }]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('rejects a missing attachment file and sends no request', async () => {
+  servers.graph.reset();
+  const result = await cli.run(['send', '--to', 'person@example.test', '--attach', '/nonexistent/file.docx', '--yes']);
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /Cannot read attachment/);
+  assert.equal(servers.graph.requests.length, 0);
+});
+
+it('rejects --attach combined with --draft', async () => {
+  const result = await cli.run(['send', '--draft', 'draft-1', '--attach', '/tmp/x', '--yes']);
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /cannot be combined/);
+});
+
+it('rejects an attachment of 3 MB or more', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const big = join(dir, 'big.bin');
+  writeFileSync(big, Buffer.alloc(3_000_000));
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', big, '--yes']);
+    assert.equal(result.code, 2);
+    assert.match(result.stderr, /must be under 3 MB/);
+    assert.equal(servers.graph.requests.length, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('accepts an attachment just under 3 MB', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'edge.bin');
+  writeFileSync(file, Buffer.alloc(2_999_999));
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', file, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(servers.graph.requests.length, 1);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
