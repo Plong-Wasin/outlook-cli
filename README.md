@@ -57,7 +57,7 @@ Run `outlook --help` for the concise reference and `outlook --version` to check 
 | `forward <id> --to <addresses> --body <text> [--attach <file>]... (--yes\|--draft)` | Forward a Message or save a Draft. **Writes mailbox data.** |
 | `api <METHOD> <path> [key=value ...] [--data JSON\|@file\|-] [--header 'Name: value'] [--all]` | Call any Microsoft Graph endpoint. Non-GET methods **write mailbox data** and require explicit user instruction. |
 
-Compose `--body` accepts literal text, `@file`, or `-` for stdin. Use `--html` to send an HTML body. `--attach <file>` (repeatable) attaches a file under 3 MB to `draft`, `send`, `reply`, `reply-all`, and `forward`. Bulk commands continue after individual failures and report a failure count. `--json` is for read commands only. List commands print a continuation cursor on stderr; pass it with `--cursor` or use `--all` up to the safety cap. IDs may be pasted from Outlook on the web URLs.
+Compose `--body` accepts literal text, `@file`, or `-` for stdin. Use `--html` to send an HTML body. `--attach <file>` (repeatable) attaches a file under 3 MB to `draft`, `send`, `reply`, `reply-all`, and `forward`. Graph documents no limit on the combined size; if it rejects a `send` with several large files, save a Draft and add the files with `draft --update <id> --attach <file>`. Bulk commands continue after individual failures and report a failure count. `--json` is for read commands only. List commands print a continuation cursor on stderr; pass it with `--cursor` or use `--all` up to the safety cap. IDs may be pasted from Outlook on the web URLs.
 
 ## Agent plugin
 

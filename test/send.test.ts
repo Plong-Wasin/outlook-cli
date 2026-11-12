@@ -114,3 +114,15 @@ it('rejects an attachment of 3 MB or more', async () => {
     assert.equal(servers.graph.requests.length, 0);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+it('accepts an attachment just under 3 MB', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'edge.bin');
+  writeFileSync(file, Buffer.alloc(2_999_999));
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', file, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(servers.graph.requests.length, 1);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
