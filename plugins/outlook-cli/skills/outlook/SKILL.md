@@ -52,13 +52,13 @@ outlook api GET <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: va
 Mailbox writes (run only after the specific user instruction):
 
 ```sh
-outlook draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
+outlook draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]...
 outlook draft --update <id> [fields]
-outlook send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] --yes
+outlook send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]... --yes
 outlook send --draft <id> --yes
-outlook reply <id> --body <text> (--yes|--draft)
-outlook reply-all <id> --body <text> (--yes|--draft)
-outlook forward <id> --to <addresses> --body <text> (--yes|--draft)
+outlook reply <id> --body <text> [--attach <file>]... (--yes|--draft)
+outlook reply-all <id> --body <text> [--attach <file>]... (--yes|--draft)
+outlook forward <id> --to <addresses> --body <text> [--attach <file>]... (--yes|--draft)
 outlook mark <id...> --read|--unread
 outlook delete <id...> --yes
 outlook api <POST|PUT|PATCH|DELETE> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value']

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, it } from 'node:test';
 import { createCli, type Cli } from './helpers/cli.ts';
 import { startFakeServers, type FakeServers } from './helpers/fake-server.ts';
@@ -64,4 +67,29 @@ it('shows saved Draft recipients and subject without sending when --yes is omitt
   assert.match(result.stdout, /Subject: Saved subject/);
   assert.match(result.stderr, /--yes/);
   assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject']]);
+});
+
+it('attaches files to a new Message as base64 fileAttachments', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'report.html');
+  writeFileSync(file, '<p>Hi</p>');
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--subject', 'Hello', '--body', 'See file', '--attach', file, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    const sent = JSON.parse(servers.graph.requests[0]!.body);
+    assert.deepEqual(sent.message.attachments, [{
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: 'report.html',
+      contentBytes: Buffer.from('<p>Hi</p>').toString('base64'),
+    }]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('rejects a missing attachment file and sends no request', async () => {
+  servers.graph.reset();
+  const result = await cli.run(['send', '--to', 'person@example.test', '--attach', '/nonexistent/file.docx', '--yes']);
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /Cannot read attachment/);
+  assert.equal(servers.graph.requests.length, 0);
 });

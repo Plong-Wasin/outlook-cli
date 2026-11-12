@@ -1,6 +1,6 @@
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
-import { bodyContent, recipients, type Recipient } from '../utils/compose.js';
+import { attachments, bodyContent, recipients, type Recipient } from '../utils/compose.js';
 import { messageId } from '../utils/message-id.js';
 
 interface SendOptions {
@@ -10,6 +10,7 @@ interface SendOptions {
   bcc?: string[];
   subject?: string;
   body?: string;
+  attach?: string[];
   html: boolean;
   yes: boolean;
 }
@@ -21,7 +22,7 @@ function parseArgs(args: string[]): SendOptions {
     const arg = args[index]!;
     if (arg === '--html') { options.html = true; continue; }
     if (arg === '--yes') { options.yes = true; continue; }
-    if (!['--draft', '--to', '--cc', '--bcc', '--subject', '--body'].includes(arg)) {
+    if (!['--draft', '--to', '--cc', '--bcc', '--subject', '--body', '--attach'].includes(arg)) {
       usage(`Unknown send option: ${arg}.`);
     }
     const value = args[index + 1];
@@ -43,8 +44,9 @@ function parseArgs(args: string[]): SendOptions {
   options.bcc = values.get('--bcc');
   options.subject = one('--subject');
   options.body = one('--body');
+  options.attach = values.get('--attach');
   if (options.draft !== undefined && !options.draft) usage("Option '--draft' requires a Draft id.");
-  if (options.draft !== undefined && (options.to || options.cc || options.bcc || options.subject !== undefined || options.body !== undefined || options.html)) {
+  if (options.draft !== undefined && (options.to || options.cc || options.bcc || options.subject !== undefined || options.body !== undefined || options.attach || options.html)) {
     usage("Option '--draft' cannot be combined with compose options.");
   }
   if (options.body === undefined && options.html) usage("Option '--html' requires '--body'.");
@@ -57,6 +59,7 @@ interface MessageSummary {
   ccRecipients?: Recipient[];
   bccRecipients?: Recipient[];
   subject?: string;
+  attachments?: { name?: string }[];
 }
 
 function preview(message: MessageSummary): void {
@@ -65,6 +68,7 @@ function preview(message: MessageSummary): void {
     .map((recipient) => recipient.emailAddress?.address)
     .filter((address): address is string => Boolean(address));
   process.stdout.write(`Recipients: ${addresses.length ? addresses.join(', ') : '(none)'}\nSubject: ${message.subject ?? ''}\n`);
+  if (message.attachments?.length) process.stdout.write(`Attachments: ${message.attachments.map((file) => file.name).join(', ')}\n`);
 }
 
 export async function runSendCommand(ctx: Context, args: string[]): Promise<void> {
@@ -83,7 +87,9 @@ export async function runSendCommand(ctx: Context, args: string[]): Promise<void
     return;
   }
 
+  const files = attachments(options.attach);
   const message: Record<string, unknown> = {
+    ...(files ? { attachments: files } : {}),
     ...(options.to ? { toRecipients: recipients(options.to) } : {}),
     ...(options.cc ? { ccRecipients: recipients(options.cc) } : {}),
     ...(options.bcc ? { bccRecipients: recipients(options.bcc) } : {}),

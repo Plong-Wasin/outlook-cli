@@ -27,13 +27,13 @@ Commands and options:
   config show
   me [--json]
   api <METHOD> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value'] [--all]
-  draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html]
+  draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]...
   draft --update <id> [fields]
-  send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] --yes
+  send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]... --yes
   send --draft <id> --yes
-  reply <id> --body <text> (--yes|--draft)
-  reply-all <id> --body <text> (--yes|--draft)
-  forward <id> --to <addresses> --body <text> (--yes|--draft)
+  reply <id> --body <text> [--attach <file>]... (--yes|--draft)
+  reply-all <id> --body <text> [--attach <file>]... (--yes|--draft)
+  forward <id> --to <addresses> --body <text> [--attach <file>]... (--yes|--draft)
   mark <id...> --read|--unread
   delete <id...> --yes
   folders [--cursor <cursor> | --all] [--json]

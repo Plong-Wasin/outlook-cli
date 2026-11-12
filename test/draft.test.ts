@@ -56,3 +56,30 @@ it('creates a text Draft from stdin and PATCHes only supplied fields on update',
     body: { contentType: 'Text', content: 'New body' },
   });
 });
+
+it('creates a Draft with inline attachments', async () => {
+  const file = join(cli.home, 'letter.docx');
+  writeFileSync(file, 'docx-bytes');
+  const result = await cli.run(['draft', '--to', 'one@example.test', '--attach', file]);
+  assert.equal(result.code, 0, result.stderr);
+  const request = servers.graph.requests.at(-1)!;
+  assert.equal(request.path, '/me/messages');
+  assert.deepEqual(JSON.parse(request.body).attachments, [{
+    '@odata.type': '#microsoft.graph.fileAttachment',
+    name: 'letter.docx',
+    contentBytes: Buffer.from('docx-bytes').toString('base64'),
+  }]);
+});
+
+it('PATCHes a Draft then POSTs each attachment on update', async () => {
+  const file = join(cli.home, 'page.html');
+  writeFileSync(file, '<b>x</b>');
+  servers.graph.reset();
+  const result = await cli.run(['draft', '--update', 'draft-123', '--attach', file]);
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [
+    ['PATCH', '/me/messages/draft-123'],
+    ['POST', '/me/messages/draft-123/attachments'],
+  ]);
+  assert.equal(JSON.parse(servers.graph.requests[1]!.body).name, 'page.html');
+});

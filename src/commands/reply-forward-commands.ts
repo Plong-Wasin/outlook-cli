@@ -1,7 +1,7 @@
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
 import { messageId } from '../utils/message-id.js';
-import { bodyContent } from '../utils/compose.js';
+import { attachments, bodyContent } from '../utils/compose.js';
 
 type ReplyCommand = 'reply' | 'reply-all' | 'forward';
 
@@ -9,16 +9,24 @@ interface ReplyOptions {
   id?: string;
   body?: string;
   to?: string;
+  attach: string[];
   draft: boolean;
   yes: boolean;
 }
 
 function parseArgs(command: ReplyCommand, args: string[]): ReplyOptions {
-  const options: ReplyOptions = { draft: false, yes: false };
+  const options: ReplyOptions = { attach: [], draft: false, yes: false };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (arg === '--draft') { options.draft = true; continue; }
     if (arg === '--yes') { options.yes = true; continue; }
+    if (arg === '--attach') {
+      const value = args[index + 1];
+      if (value === undefined || (value.startsWith('--') && value !== '-')) usage(`Option '${arg}' requires a value.`);
+      options.attach.push(value);
+      index += 1;
+      continue;
+    }
     if (arg === '--body' || arg === '--to') {
       const value = args[index + 1];
       if (value === undefined || (value.startsWith('--') && value !== '-')) usage(`Option '${arg}' requires a value.`);
@@ -53,9 +61,13 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
   const action = options.draft ? `create${operation[0]!.toUpperCase()}${operation.slice(1)}` : operation;
   const recipients = options.to?.split(',').map((address) => address.trim()).filter(Boolean).map((address) => ({ emailAddress: { address } }));
   if (options.to !== undefined && !recipients?.length) usage("Option '--to' must include at least one email address.");
+  const files = attachments(options.attach.length ? options.attach : undefined);
+  const extra = files ? { attachments: files } : {};
   const body = command === 'forward'
-    ? options.draft ? { message: { toRecipients: recipients }, comment } : { toRecipients: recipients, comment }
-    : { comment };
+    ? options.draft
+      ? { message: { toRecipients: recipients, ...extra }, comment }
+      : { toRecipients: recipients, comment, ...(files ? { message: extra } : {}) }
+    : { comment, ...(files ? { message: extra } : {}) };
   const response = await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(id)}/${action}`, {
     body: JSON.stringify(body),
   });

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import { usage } from './errors.js';
 
 export type Recipient = { emailAddress: { address: string } };
@@ -24,4 +25,20 @@ export async function bodyContent(value: string): Promise<string> {
     catch { usage(`Cannot read body file '${path}'. Check the file path and permissions.`); }
   }
   return value;
+}
+
+export type FileAttachment = { '@odata.type': '#microsoft.graph.fileAttachment'; name: string; contentBytes: string };
+
+// Graph accepts inline attachment bytes up to 3 MB per file.
+const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+
+export function attachments(paths: string[] | undefined): FileAttachment[] | undefined {
+  if (!paths) return undefined;
+  return paths.map((path) => {
+    let bytes: Buffer;
+    try { bytes = readFileSync(path); }
+    catch { usage(`Cannot read attachment '${path}'. Check the file path and permissions.`); }
+    if (bytes.length > MAX_ATTACHMENT_BYTES) usage(`Attachment '${path}' is larger than 3 MB.`);
+    return { '@odata.type': '#microsoft.graph.fileAttachment', name: basename(path), contentBytes: bytes.toString('base64') };
+  });
 }

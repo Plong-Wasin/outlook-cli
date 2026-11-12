@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, it } from 'node:test';
 import { createCli, type Cli } from './helpers/cli.ts';
 import { startFakeServers, type FakeServers } from './helpers/fake-server.ts';
@@ -59,4 +62,17 @@ it('sends the matching reply or forward request when --yes is supplied', async (
         : { comment: 'Hello' }],
     ]);
   }
+});
+
+it('sends attachments in the message part of a reply', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'a.txt');
+  writeFileSync(file, 'abc');
+  try {
+    servers.graph.reset();
+    const result = await cli.run(['reply', 'message-123', '--body', 'Hello', '--attach', file, '--draft']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(servers.graph.requests[0]!.path, '/me/messages/message-123/createReply');
+    assert.equal(JSON.parse(servers.graph.requests[0]!.body).message.attachments[0].name, 'a.txt');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

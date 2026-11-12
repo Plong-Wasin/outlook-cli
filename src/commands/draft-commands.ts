@@ -1,6 +1,6 @@
 import { graphRequest, type Context } from './auth-commands.js';
 import { usage } from '../utils/errors.js';
-import { bodyContent, recipients } from '../utils/compose.js';
+import { attachments, bodyContent, recipients } from '../utils/compose.js';
 import { messageId } from '../utils/message-id.js';
 
 interface DraftOptions {
@@ -10,6 +10,7 @@ interface DraftOptions {
   bcc?: string[];
   subject?: string;
   body?: string;
+  attach?: string[];
   html: boolean;
 }
 
@@ -19,7 +20,7 @@ function parseArgs(args: string[]): DraftOptions {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (arg === '--html') { options.html = true; continue; }
-    if (!['--update', '--to', '--cc', '--bcc', '--subject', '--body'].includes(arg)) {
+    if (!['--update', '--to', '--cc', '--bcc', '--subject', '--body', '--attach'].includes(arg)) {
       usage(`Unknown draft option: ${arg}.`);
     }
     const value = args[index + 1];
@@ -41,6 +42,7 @@ function parseArgs(args: string[]): DraftOptions {
   options.bcc = values.get('--bcc');
   options.subject = one('--subject');
   options.body = one('--body');
+  options.attach = values.get('--attach');
   if (options.update !== undefined && !options.update) usage("Option '--update' requires a Draft id.");
   if (options.body === undefined && options.html) usage("Option '--html' requires '--body'.");
   return options;
@@ -52,7 +54,9 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
     contentType: options.html ? 'HTML' : 'Text',
     content: await bodyContent(options.body),
   };
+  const files = attachments(options.attach);
   const patch: Record<string, unknown> = {
+    ...(files && options.update === undefined ? { attachments: files } : {}),
     ...(options.to ? { toRecipients: recipients(options.to) } : {}),
     ...(options.cc ? { ccRecipients: recipients(options.cc) } : {}),
     ...(options.bcc ? { bccRecipients: recipients(options.bcc) } : {}),
@@ -65,5 +69,12 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
   if (options.update === undefined) {
     const id = (response as { id?: string } | undefined)?.id;
     process.stdout.write(id ? `Draft created: ${id}\n` : 'Draft created.\n');
-  } else process.stdout.write(`Draft updated: ${options.update}\n`);
+  } else {
+    // Graph cannot patch attachments onto an existing Draft; add each one separately.
+    const updateId = messageId(options.update);
+    for (const file of files ?? []) {
+      await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(updateId)}/attachments`, { body: JSON.stringify(file) });
+    }
+    process.stdout.write(`Draft updated: ${options.update}\n`);
+  }
 }
