@@ -1,5 +1,5 @@
 import { graphRequest, type Context } from './auth-commands.js';
-import { usage } from '../utils/errors.js';
+import { CliError, usage } from '../utils/errors.js';
 import { messageId } from '../utils/message-id.js';
 import { attachments, bodyContent } from '../utils/compose.js';
 
@@ -58,21 +58,27 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
   const input = options.body!;
   const comment = await bodyContent(input);
   const operation = command === 'reply-all' ? 'replyAll' : command;
-  const action = options.draft ? `create${operation[0]!.toUpperCase()}${operation.slice(1)}` : operation;
   const recipients = options.to?.split(',').map((address) => address.trim()).filter(Boolean).map((address) => ({ emailAddress: { address } }));
   if (options.to !== undefined && !recipients?.length) usage("Option '--to' must include at least one email address.");
   const files = attachments(options.attach.length ? options.attach : undefined);
-  const extra = files ? { attachments: files } : {};
+  // Attachments go onto a Draft (documented `/attachments` endpoint), so with files
+  // even `--yes` creates the Draft first and sends it afterwards.
+  const viaDraft = options.draft || Boolean(files);
+  const action = viaDraft ? `create${operation[0]!.toUpperCase()}${operation.slice(1)}` : operation;
   const body = command === 'forward'
-    ? options.draft
-      ? { message: { toRecipients: recipients, ...extra }, comment }
-      : { toRecipients: recipients, comment, ...(files ? { message: extra } : {}) }
-    : { comment, ...(files ? { message: extra } : {}) };
+    ? viaDraft ? { message: { toRecipients: recipients }, comment } : { toRecipients: recipients, comment }
+    : { comment };
   const response = await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(id)}/${action}`, {
     body: JSON.stringify(body),
   });
-  if (options.draft) {
-    const draftId = (response as { id?: string } | undefined)?.id;
-    process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');
-  } else process.stdout.write(`${command === 'reply-all' ? 'Reply-all' : command[0]!.toUpperCase() + command.slice(1)} sent.\n`);
+  const draftId = (response as { id?: string } | undefined)?.id;
+  if (files) {
+    if (!draftId) throw new CliError('Graph did not return a Draft id, so the attachments were not added.');
+    for (const file of files) {
+      await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/attachments`, { body: JSON.stringify(file) });
+    }
+    if (!options.draft) await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/send`);
+  }
+  if (options.draft) process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');
+  else process.stdout.write(`${command === 'reply-all' ? 'Reply-all' : command[0]!.toUpperCase() + command.slice(1)} sent.\n`);
 }

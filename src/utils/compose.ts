@@ -29,16 +29,22 @@ export async function bodyContent(value: string): Promise<string> {
 
 export type FileAttachment = { '@odata.type': '#microsoft.graph.fileAttachment'; name: string; contentBytes: string };
 
-// Graph accepts inline attachment bytes up to 3 MB per file.
+// Graph accepts inline attachment bytes up to 3 MB per file. Files that travel in one
+// request body (`send`, new Draft) must also fit in 3 MB together, because base64 and the
+// rest of the message count against the request limit.
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 
-export function attachments(paths: string[] | undefined): FileAttachment[] | undefined {
+export function attachments(paths: string[] | undefined, together = false): FileAttachment[] | undefined {
   if (!paths) return undefined;
-  return paths.map((path) => {
+  let total = 0;
+  const files = paths.map((path) => {
     let bytes: Buffer;
     try { bytes = readFileSync(path); }
     catch { usage(`Cannot read attachment '${path}'. Check the file path and permissions.`); }
     if (bytes.length > MAX_ATTACHMENT_BYTES) usage(`Attachment '${path}' is larger than 3 MB.`);
-    return { '@odata.type': '#microsoft.graph.fileAttachment', name: basename(path), contentBytes: bytes.toString('base64') };
+    total += bytes.length;
+    return { '@odata.type': '#microsoft.graph.fileAttachment' as const, name: basename(path), contentBytes: bytes.toString('base64') };
   });
+  if (together && total > MAX_ATTACHMENT_BYTES) usage('Attachments sent in one request must total 3 MB or less. Save a Draft with fewer files, then add the rest with \'draft --update\'.');
+  return files;
 }

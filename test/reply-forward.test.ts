@@ -64,15 +64,42 @@ it('sends the matching reply or forward request when --yes is supplied', async (
   }
 });
 
-it('sends attachments in the message part of a reply', async () => {
+it('adds attachments to the Draft and sends it for reply, reply-all and forward with --yes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
   const file = join(dir, 'a.txt');
   writeFileSync(file, 'abc');
+  servers.graph.setReply((_request, response) => {
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ id: 'draft-9' }));
+  });
+  try {
+    for (const [command, endpoint] of [['reply', 'createReply'], ['reply-all', 'createReplyAll'], ['forward', 'createForward']] as const) {
+      servers.graph.reset();
+      const result = await cli.run([command, 'message-123', ...(command === 'forward' ? ['--to', 'person@example.test'] : []), '--body', 'Hello', '--attach', file, '--yes']);
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [
+        ['POST', `/me/messages/message-123/${endpoint}`],
+        ['POST', '/me/messages/draft-9/attachments'],
+        ['POST', '/me/messages/draft-9/send'],
+      ], command);
+      assert.equal(JSON.parse(servers.graph.requests[1]!.body).name, 'a.txt');
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('leaves the Draft unsent when --draft is used with --attach', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'a.txt');
+  writeFileSync(file, 'abc');
+  servers.graph.setReply((_request, response) => {
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ id: 'draft-9' }));
+  });
   try {
     servers.graph.reset();
     const result = await cli.run(['reply', 'message-123', '--body', 'Hello', '--attach', file, '--draft']);
     assert.equal(result.code, 0, result.stderr);
-    assert.equal(servers.graph.requests[0]!.path, '/me/messages/message-123/createReply');
-    assert.equal(JSON.parse(servers.graph.requests[0]!.body).message.attachments[0].name, 'a.txt');
+    assert.match(result.stdout, /Draft created: draft-9/);
+    assert.deepEqual(servers.graph.requests.map(({ path }) => path), ['/me/messages/message-123/createReply', '/me/messages/draft-9/attachments']);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

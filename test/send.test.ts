@@ -93,3 +93,24 @@ it('rejects a missing attachment file and sends no request', async () => {
   assert.match(result.stderr, /Cannot read attachment/);
   assert.equal(servers.graph.requests.length, 0);
 });
+
+it('rejects attachments that together exceed 3 MB and sends no request', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const one = join(dir, 'one.bin');
+  const two = join(dir, 'two.bin');
+  writeFileSync(one, Buffer.alloc(2 * 1024 * 1024));
+  writeFileSync(two, Buffer.alloc(2 * 1024 * 1024));
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', one, '--attach', two, '--yes']);
+    assert.equal(result.code, 2);
+    assert.match(result.stderr, /total 3 MB/);
+    assert.equal(servers.graph.requests.length, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('rejects --attach combined with --draft', async () => {
+  const result = await cli.run(['send', '--draft', 'draft-1', '--attach', '/tmp/x', '--yes']);
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /cannot be combined/);
+});

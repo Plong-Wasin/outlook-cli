@@ -87,7 +87,7 @@ export async function runSendCommand(ctx: Context, args: string[]): Promise<void
     return;
   }
 
-  const files = attachments(options.attach);
+  const files = attachments(options.attach, true);
   const message: Record<string, unknown> = {
     ...(files ? { attachments: files } : {}),
     ...(options.to ? { toRecipients: recipients(options.to) } : {}),
