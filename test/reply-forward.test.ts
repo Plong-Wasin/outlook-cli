@@ -117,7 +117,24 @@ it('names the created Draft when adding an attachment fails', async () => {
     servers.graph.reset();
     const result = await cli.run(['reply', 'message-123', '--body', 'Hello', '--attach', file, '--yes']);
     assert.equal(result.code, 1);
-    assert.match(result.stderr, /Draft draft-9 was created but sending was not confirmed/);
+    assert.match(result.stderr, /Draft draft-9 was created but not all files were attached and nothing was sent/);
     assert.ok(!servers.graph.requests.some(({ path }) => path.endsWith('/send')));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('says sending was not confirmed when /send fails after the files are attached', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'a.txt');
+  writeFileSync(file, 'abc');
+  servers.graph.setReply((request, response) => {
+    if (request.path.endsWith('/send')) { response.writeHead(500, { 'Content-Type': 'application/json' }); response.end('{}'); return; }
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ id: 'draft-9' }));
+  });
+  try {
+    servers.graph.reset();
+    const result = await cli.run(['reply', 'message-123', '--body', 'Hello', '--attach', file, '--yes']);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /Draft draft-9 was created but sending was not confirmed/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

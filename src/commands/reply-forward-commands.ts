@@ -74,15 +74,19 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
   const draftId = (response as { id?: string } | undefined)?.id;
   if (files) {
     if (!draftId) throw new CliError('Graph did not return a Draft id, so the attachments were not added.');
+    let sending = false;
     try {
       for (const file of files) {
         await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/attachments`, { body: JSON.stringify(file) });
       }
-      if (!options.draft) await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/send`);
+      if (!options.draft) {
+        sending = true;
+        await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/send`);
+      }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       const code = error instanceof CliError ? error.exitCode : 1;
-      throw new CliError(`Draft ${draftId} was created but ${options.draft ? 'not all files were attached' : 'sending was not confirmed (check Sent Items before retrying)'}: ${detail}`, code);
+      throw new CliError(`Draft ${draftId} was created but ${sending ? 'sending was not confirmed (check Sent Items before retrying)' : 'not all files were attached and nothing was sent'}: ${detail}`, code);
     }
   }
   if (options.draft) process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');
