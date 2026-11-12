@@ -66,7 +66,7 @@ it('shows saved Draft recipients and subject without sending when --yes is omitt
   assert.match(result.stdout, /person@example\.test/);
   assert.match(result.stdout, /Subject: Saved subject/);
   assert.match(result.stderr, /--yes/);
-  assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject']]);
+  assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject&%24expand=attachments%28%24select%3Dname%29']]);
 });
 
 it('attaches files to a new Message as base64 fileAttachments', async () => {
