@@ -56,9 +56,9 @@ outlook draft [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subje
 outlook draft --update <id> [fields]
 outlook send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]... --yes
 outlook send --draft <id> --yes
-outlook reply <id> --body <text> [--attach <file>]... (--yes|--draft)
-outlook reply-all <id> --body <text> [--attach <file>]... (--yes|--draft)
-outlook forward <id> --to <addresses> --body <text> [--attach <file>]... (--yes|--draft)
+outlook reply <id> --body <text> [--html] [--attach <file>]... (--yes|--draft)
+outlook reply-all <id> --body <text> [--html] [--attach <file>]... (--yes|--draft)
+outlook forward <id> --to <addresses> --body <text> [--html] [--attach <file>]... (--yes|--draft)
 outlook mark <id...> --read|--unread
 outlook delete <id...> --yes
 outlook api <POST|PUT|PATCH|DELETE> <path> [key=value ...] [--data JSON|@file|-] [--header 'Name: value']
@@ -71,7 +71,7 @@ outlook auth login       # writes local credentials; ask before starting sign-in
 outlook auth logout      # removes local credentials
 ```
 
-Compose body values accept literal text, `@file`, or `-` for stdin. Use `--html` for HTML bodies. `--json` is accepted on read commands only. Lists show a continuation cursor on stderr; pass it with `--cursor` or use `--all` up to the safety cap. Message IDs may be copied from Outlook on the web URLs.
+Compose body values accept literal text, `@file`, or `-` for stdin. Use `--html` for HTML bodies. On `reply`, `reply-all`, and `forward`, a multi-line `--body` keeps its line breaks (written into the Draft's HTML body above the quote). `--json` is accepted on read commands only. Lists show a continuation cursor on stderr; pass it with `--cursor` or use `--all` up to the safety cap. Message IDs may be copied from Outlook on the web URLs.
 
 Raw API requests accept `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`; `--all` follows pages for reads. Treat every non-GET method as a mailbox write.
 

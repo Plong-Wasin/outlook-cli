@@ -31,9 +31,9 @@ Commands and options:
   draft --update <id> [fields]
   send [--to <addresses>] [--cc <addresses>] [--bcc <addresses>] [--subject <text>] [--body <text|@file|->] [--html] [--attach <file>]... --yes
   send --draft <id> --yes
-  reply <id> --body <text> [--attach <file>]... (--yes|--draft)
-  reply-all <id> --body <text> [--attach <file>]... (--yes|--draft)
-  forward <id> --to <addresses> --body <text> [--attach <file>]... (--yes|--draft)
+  reply <id> --body <text> [--html] [--attach <file>]... (--yes|--draft)
+  reply-all <id> --body <text> [--html] [--attach <file>]... (--yes|--draft)
+  forward <id> --to <addresses> --body <text> [--html] [--attach <file>]... (--yes|--draft)
   mark <id...> --read|--unread
   delete <id...> --yes
   folders [--cursor <cursor> | --all] [--json]
