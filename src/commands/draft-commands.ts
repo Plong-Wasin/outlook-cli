@@ -54,7 +54,7 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
     contentType: options.html ? 'HTML' : 'Text',
     content: await bodyContent(options.body),
   };
-  const files = attachments(options.attach, options.update === undefined);
+  const files = attachments(options.attach);
   const patch: Record<string, unknown> = {
     ...(files && options.update === undefined ? { attachments: files } : {}),
     ...(options.to ? { toRecipients: recipients(options.to) } : {}),

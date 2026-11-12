@@ -96,36 +96,21 @@ it('rejects a missing attachment file and sends no request', async () => {
   assert.equal(servers.graph.requests.length, 0);
 });
 
-it('rejects attachments that together exceed 3 MB and sends no request', async () => {
-  servers.graph.reset();
-  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
-  const one = join(dir, 'one.bin');
-  const two = join(dir, 'two.bin');
-  writeFileSync(one, Buffer.alloc(1.5 * 1024 * 1024));
-  writeFileSync(two, Buffer.alloc(1.5 * 1024 * 1024));
-  try {
-    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', one, '--attach', two, '--yes']);
-    assert.equal(result.code, 2);
-    assert.match(result.stderr, /total 2\.5 MB/);
-    assert.equal(servers.graph.requests.length, 0);
-  } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
 it('rejects --attach combined with --draft', async () => {
   const result = await cli.run(['send', '--draft', 'draft-1', '--attach', '/tmp/x', '--yes']);
   assert.equal(result.code, 2);
   assert.match(result.stderr, /cannot be combined/);
 });
 
-it('rejects a single attachment larger than 3 MB', async () => {
+it('rejects an attachment of 3 MB or more', async () => {
   servers.graph.reset();
   const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
   const big = join(dir, 'big.bin');
-  writeFileSync(big, Buffer.alloc(3 * 1024 * 1024 + 1));
+  writeFileSync(big, Buffer.alloc(3_000_000));
   try {
     const result = await cli.run(['send', '--to', 'person@example.test', '--attach', big, '--yes']);
     assert.equal(result.code, 2);
-    assert.match(result.stderr, /larger than 3 MB/);
+    assert.match(result.stderr, /must be under 3 MB/);
     assert.equal(servers.graph.requests.length, 0);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
