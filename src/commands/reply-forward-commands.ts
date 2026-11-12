@@ -37,10 +37,10 @@ function parseArgs(command: ReplyCommand, args: string[]): ReplyOptions {
       continue;
     }
     if (arg.startsWith('-')) usage(`Unknown ${command} option: ${arg}.`);
-    if (options.id !== undefined) usage(`Usage: outlook ${command} <id> --body <text> [--draft|--yes]`);
+    if (options.id !== undefined) usage(`Usage: outlook ${command} <id> --body <text> [--attach <file>]... [--draft|--yes]`);
     options.id = arg;
   }
-  if (!options.id) usage(`Usage: outlook ${command} <id> --body <text> [--draft|--yes]`);
+  if (!options.id) usage(`Usage: outlook ${command} <id> --body <text> [--attach <file>]... [--draft|--yes]`);
   if (options.body === undefined) usage("Option '--body' is required.");
   if (options.to !== undefined && command !== 'forward') usage("Option '--to' is only supported by 'forward'.");
   if (command === 'forward' && !options.to) usage("Option '--to' is required for 'forward'.");
@@ -82,7 +82,7 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       const code = error instanceof CliError ? error.exitCode : 1;
-      throw new CliError(`Draft ${draftId} was created but ${options.draft ? 'not all files were attached' : 'was not sent'}: ${detail}`, code);
+      throw new CliError(`Draft ${draftId} was created but ${options.draft ? 'not all files were attached' : 'sending was not confirmed (check Sent Items before retrying)'}: ${detail}`, code);
     }
   }
   if (options.draft) process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');

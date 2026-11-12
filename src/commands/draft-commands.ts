@@ -77,7 +77,7 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
         await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(updateId)}/attachments`, { body: JSON.stringify(file) });
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
-        throw new CliError(`Draft ${options.update} was updated but '${file.name}' was not attached: ${detail}`, error instanceof CliError ? error.exitCode : 1);
+        throw new CliError(`Draft ${options.update} was updated but '${file.name}' was not attached (files listed as 'Attached' stay on the Draft; do not repeat them): ${detail}`, error instanceof CliError ? error.exitCode : 1);
       }
       process.stdout.write(`Attached: ${file.name}\n`);
     }

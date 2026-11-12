@@ -83,3 +83,21 @@ it('PATCHes a Draft then POSTs each attachment on update', async () => {
   ]);
   assert.equal(JSON.parse(servers.graph.requests[1]!.body).name, 'page.html');
 });
+
+it('names the Draft and failed file when an attachment POST fails on update', async () => {
+  const one = join(cli.home, 'one.txt');
+  const two = join(cli.home, 'two.txt');
+  writeFileSync(one, '1');
+  writeFileSync(two, '2');
+  let posts = 0;
+  servers.graph.setReply((request, response) => {
+    if (request.path.endsWith('/attachments') && ++posts === 2) { response.writeHead(500, { 'Content-Type': 'application/json' }); response.end('{}'); return; }
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ id: 'draft-123' }));
+  });
+  servers.graph.reset();
+  const result = await cli.run(['draft', '--update', 'draft-123', '--attach', one, '--attach', two]);
+  assert.equal(result.code, 1);
+  assert.match(result.stdout, /Attached: one\.txt/);
+  assert.match(result.stderr, /Draft draft-123 was updated but 'two\.txt' was not attached/);
+});

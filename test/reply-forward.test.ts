@@ -117,7 +117,7 @@ it('names the created Draft when adding an attachment fails', async () => {
     servers.graph.reset();
     const result = await cli.run(['reply', 'message-123', '--body', 'Hello', '--attach', file, '--yes']);
     assert.equal(result.code, 1);
-    assert.match(result.stderr, /Draft draft-9 was created but was not sent/);
+    assert.match(result.stderr, /Draft draft-9 was created but sending was not confirmed/);
     assert.ok(!servers.graph.requests.some(({ path }) => path.endsWith('/send')));
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

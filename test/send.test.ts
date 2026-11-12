@@ -59,12 +59,14 @@ it('shows saved Draft recipients and subject without sending when --yes is omitt
     response.end(JSON.stringify({
       toRecipients: [{ emailAddress: { address: 'person@example.test' } }],
       subject: 'Saved subject',
+      attachments: [{ name: 'a.txt' }],
     }));
   });
   const result = await cli.run(['send', '--draft', 'draft-123']);
   assert.equal(result.code, 2);
   assert.match(result.stdout, /person@example\.test/);
   assert.match(result.stdout, /Subject: Saved subject/);
+  assert.match(result.stdout, /Attachments: a\.txt/);
   assert.match(result.stderr, /--yes/);
   assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path]), [['GET', '/me/messages/draft-123?%24select=toRecipients%2CccRecipients%2CbccRecipients%2Csubject&%24expand=attachments%28%24select%3Dname%29']]);
 });
@@ -113,4 +115,17 @@ it('rejects --attach combined with --draft', async () => {
   const result = await cli.run(['send', '--draft', 'draft-1', '--attach', '/tmp/x', '--yes']);
   assert.equal(result.code, 2);
   assert.match(result.stderr, /cannot be combined/);
+});
+
+it('rejects a single attachment larger than 3 MB', async () => {
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const big = join(dir, 'big.bin');
+  writeFileSync(big, Buffer.alloc(3 * 1024 * 1024 + 1));
+  try {
+    const result = await cli.run(['send', '--to', 'person@example.test', '--attach', big, '--yes']);
+    assert.equal(result.code, 2);
+    assert.match(result.stderr, /larger than 3 MB/);
+    assert.equal(servers.graph.requests.length, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
