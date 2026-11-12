@@ -213,3 +213,27 @@ it('names the Draft when patching the multi-line body fails and sends nothing', 
   assert.match(result.stderr, /Draft draft-5 was created but .*nothing was sent/);
   assert.ok(!servers.graph.requests.some(({ path }) => path.endsWith('/send')));
 });
+
+it('keeps the one-request path for a single-line body that ends with a newline', async () => {
+  servers.graph.setReply((_request, response) => { response.writeHead(202).end(); });
+  servers.graph.reset();
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-body-'));
+  const file = join(dir, 'body.txt');
+  writeFileSync(file, 'Hello\n');
+  try {
+    const result = await cli.run(['reply', 'message-123', '--body', `@${file}`, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(servers.graph.requests.map(({ method, path, body }) => [method, path, JSON.parse(body)]), [
+      ['POST', '/me/messages/message-123/reply', { comment: 'Hello' }],
+    ]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('asks Graph for the Draft body as HTML', async () => {
+  multilineDraftServer();
+  servers.graph.reset();
+  const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--draft']);
+  assert.equal(result.code, 0, result.stderr);
+  const get = servers.graph.requests.find(({ method }) => method === 'GET')!;
+  assert.equal(get.headers.prefer, 'outlook.body-content-type="html"');
+});

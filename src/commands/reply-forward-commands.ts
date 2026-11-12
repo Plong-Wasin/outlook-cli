@@ -17,7 +17,7 @@ function commentHtml(comment: string, isHtml: boolean): string {
 // Put the new text directly after <body>, so the quoted original stays below it.
 async function writeHtmlBody(ctx: Context, draftId: string, html: string): Promise<void> {
   const path = `/me/messages/${encodeURIComponent(draftId)}`;
-  const draft = await graphRequest(ctx, 'GET', path, { query: new URLSearchParams({ $select: 'body' }) }) as { body?: { content?: string } } | undefined;
+  const draft = await graphRequest(ctx, 'GET', path, { query: new URLSearchParams({ $select: 'body' }), headers: { Prefer: 'outlook.body-content-type="html"' } }) as { body?: { content?: string } } | undefined;
   const existing = draft?.body?.content ?? '';
   const opening = /<body[^>]*>/i.exec(existing);
   const content = opening
@@ -79,7 +79,9 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
     usage(`Refusing to ${command} without '--yes' or '--draft'.`);
   }
   const input = options.body!;
-  const comment = await bodyContent(input);
+  // A trailing newline (`@file`, stdin) is not a line break the author meant to keep.
+  const raw = await bodyContent(input);
+  const comment = options.html ? raw : raw.replace(/(\r?\n)+$/, '');
   const operation = command === 'reply-all' ? 'replyAll' : command;
   const recipients = options.to?.split(',').map((address) => address.trim()).filter(Boolean).map((address) => ({ emailAddress: { address } }));
   if (options.to !== undefined && !recipients?.length) usage("Option '--to' must include at least one email address.");
