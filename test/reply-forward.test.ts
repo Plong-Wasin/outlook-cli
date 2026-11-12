@@ -198,6 +198,7 @@ it('still requires --body when only --html is given', async () => {
   servers.graph.reset();
   const result = await cli.run(['reply', 'message-123', '--html', '--draft']);
   assert.equal(result.code, 2);
+  assert.match(result.stderr, /--body/);
   assert.equal(servers.graph.requests.length, 0);
 });
 
@@ -236,4 +237,102 @@ it('asks Graph for the Draft body as HTML', async () => {
   assert.equal(result.code, 0, result.stderr);
   const get = servers.graph.requests.find(({ method }) => method === 'GET')!;
   assert.equal(get.headers.prefer, 'outlook.body-content-type="html"');
+});
+
+it('sends reply-all and forward drafts with a multi-line body and keeps the forward recipients', async () => {
+  for (const [command, endpoint] of [['reply-all', 'createReplyAll'], ['forward', 'createForward']] as const) {
+    multilineDraftServer();
+    servers.graph.reset();
+    const result = await cli.run([command, 'message-123', ...(command === 'forward' ? ['--to', 'a@example.test,b@example.test'] : []), '--body', 'A\nB', '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path.split('?')[0]]), [
+      ['POST', `/me/messages/message-123/${endpoint}`],
+      ['GET', '/me/messages/draft-5'],
+      ['PATCH', '/me/messages/draft-5'],
+      ['POST', '/me/messages/draft-5/send'],
+    ], command);
+    if (command === 'forward') {
+      assert.deepEqual(JSON.parse(servers.graph.requests[0]!.body), { message: { toRecipients: [{ emailAddress: { address: 'a@example.test' } }, { emailAddress: { address: 'b@example.test' } }] } });
+    }
+  }
+});
+
+it('writes the body, then attaches files, then sends for a multi-line body with --attach', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
+  const file = join(dir, 'a.txt');
+  writeFileSync(file, 'abc');
+  try {
+    multilineDraftServer();
+    servers.graph.reset();
+    const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--attach', file, '--yes']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(servers.graph.requests.map(({ method, path }) => [method, path.split('?')[0]]), [
+      ['POST', '/me/messages/message-123/createReply'],
+      ['GET', '/me/messages/draft-5'],
+      ['PATCH', '/me/messages/draft-5'],
+      ['POST', '/me/messages/draft-5/attachments'],
+      ['POST', '/me/messages/draft-5/send'],
+    ]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+it('treats CRLF and lone CR as line breaks and drops trailing ones', async () => {
+  multilineDraftServer();
+  servers.graph.reset();
+  const result = await cli.run(['reply', 'message-123', '--body', 'A\r\nB\rC\r\n', '--draft']);
+  assert.equal(result.code, 0, result.stderr);
+  const patched = JSON.parse(servers.graph.requests.find(({ method }) => method === 'PATCH')!.body).body.content as string;
+  assert.match(patched, /A<br>\nB<br>\nC<hr>/);
+});
+
+it('puts the text first when the Draft body has no <body> tag', async () => {
+  servers.graph.setReply((request, response) => {
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    if (request.method === 'GET') response.end(JSON.stringify({ id: 'draft-5', body: { contentType: 'html', content: '<div>quoted</div>' } }));
+    else response.end(JSON.stringify({ id: 'draft-5' }));
+  });
+  servers.graph.reset();
+  const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--draft']);
+  assert.equal(result.code, 0, result.stderr);
+  const patched = JSON.parse(servers.graph.requests.find(({ method }) => method === 'PATCH')!.body).body.content as string;
+  assert.equal(patched, 'A<br>\nB<div>quoted</div>');
+});
+
+it('refuses to overwrite a Draft whose body is missing or not HTML and sends nothing', async () => {
+  for (const draftBody of [undefined, { contentType: 'text', content: 'quoted' }, { contentType: 'html', content: '' }]) {
+    servers.graph.setReply((request, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify(request.method === 'GET' ? { id: 'draft-5', body: draftBody } : { id: 'draft-5' }));
+    });
+    servers.graph.reset();
+    const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--yes']);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /Draft draft-5 was created but .*nothing was sent.*cannot be kept.*Delete that Draft/s);
+    assert.ok(!servers.graph.requests.some(({ method, path }) => method === 'PATCH' || path.endsWith('/send')));
+  }
+});
+
+it('names the Draft when the Draft body GET fails', async () => {
+  servers.graph.setReply((request, response) => {
+    if (request.method === 'GET') { response.writeHead(500, { 'Content-Type': 'application/json' }); response.end('{}'); return; }
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ id: 'draft-5' }));
+  });
+  servers.graph.reset();
+  const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--yes']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Draft draft-5 was created but .*nothing was sent/);
+  assert.ok(!servers.graph.requests.some(({ path }) => path.endsWith('/send')));
+});
+
+it('says sending was not confirmed when /send fails after a multi-line body was written', async () => {
+  servers.graph.setReply((request, response) => {
+    if (request.path.endsWith('/send')) { response.writeHead(500, { 'Content-Type': 'application/json' }); response.end('{}'); return; }
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify(request.method === 'GET' ? { id: 'draft-5', body: { contentType: 'html', content: QUOTED_DRAFT } } : { id: 'draft-5' }));
+  });
+  servers.graph.reset();
+  const result = await cli.run(['reply', 'message-123', '--body', 'A\nB', '--yes']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Draft draft-5 was created but sending was not confirmed/);
 });

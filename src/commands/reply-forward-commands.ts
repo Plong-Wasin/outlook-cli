@@ -11,15 +11,19 @@ function escapeHtml(text: string): string {
 
 // Plain text keeps its line breaks as <br>; with --html the body is already HTML.
 function commentHtml(comment: string, isHtml: boolean): string {
-  return isHtml ? comment : escapeHtml(comment).replace(/\r?\n/g, '<br>\n');
+  return isHtml ? comment : escapeHtml(comment).replace(/\n/g, '<br>\n');
 }
 
 // Put the new text directly after <body>, so the quoted original stays below it.
 async function writeHtmlBody(ctx: Context, draftId: string, html: string): Promise<void> {
   const path = `/me/messages/${encodeURIComponent(draftId)}`;
-  const draft = await graphRequest(ctx, 'GET', path, { query: new URLSearchParams({ $select: 'body' }), headers: { Prefer: 'outlook.body-content-type="html"' } }) as { body?: { content?: string } } | undefined;
-  const existing = draft?.body?.content ?? '';
-  const opening = /<body[^>]*>/i.exec(existing);
+  const draft = await graphRequest(ctx, 'GET', path, { query: new URLSearchParams({ $select: 'body' }), headers: { Prefer: 'outlook.body-content-type="html"' } }) as { body?: { contentType?: string; content?: string } } | undefined;
+  const existing = draft?.body?.content;
+  // Writing over a body that is missing or not HTML would drop or garble the quoted message.
+  if (typeof existing !== 'string' || existing === '' || draft?.body?.contentType?.toLowerCase() !== 'html') {
+    throw new CliError('Graph did not return the Draft body as HTML, so the quoted message cannot be kept.');
+  }
+  const opening = /<body(\s[^>]*)?>/i.exec(existing);
   const content = opening
     ? existing.slice(0, opening.index + opening[0].length) + html + existing.slice(opening.index + opening[0].length)
     : html + existing;
@@ -81,14 +85,14 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
   const input = options.body!;
   // A trailing newline (`@file`, stdin) is not a line break the author meant to keep.
   const raw = await bodyContent(input);
-  const comment = options.html ? raw : raw.replace(/(\r?\n)+$/, '');
+  const comment = options.html ? raw : raw.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
   const operation = command === 'reply-all' ? 'replyAll' : command;
   const recipients = options.to?.split(',').map((address) => address.trim()).filter(Boolean).map((address) => ({ emailAddress: { address } }));
   if (options.to !== undefined && !recipients?.length) usage("Option '--to' must include at least one email address.");
   const files = attachments(options.attach.length ? options.attach : undefined);
   // Graph's `comment` is plain text that the Draft keeps on one line, so a body with line
   // breaks (or raw HTML) is written into the Draft's HTML body instead, above the quote.
-  const htmlBody = options.html || /[\r\n]/.test(comment) ? commentHtml(comment, options.html) : undefined;
+  const htmlBody = options.html || /\n/.test(comment) ? commentHtml(comment, options.html) : undefined;
   // Attachments and HTML bodies go onto a Draft (documented `/attachments` and PATCH
   // endpoints), so with either of them even `--yes` creates the Draft first and sends it afterwards.
   const viaDraft = options.draft || Boolean(files) || htmlBody !== undefined;
@@ -116,7 +120,7 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       const code = error instanceof CliError ? error.exitCode : 1;
-      throw new CliError(`Draft ${draftId} was created but ${sending ? 'sending was not confirmed (check Sent Items before retrying)' : (htmlBody === undefined ? 'not all files were attached and nothing was sent' : 'not all of the body and files were added and nothing was sent')}: ${detail}`, code);
+      throw new CliError(`Draft ${draftId} was created but ${sending ? 'sending was not confirmed (check Sent Items before retrying)' : (htmlBody === undefined ? 'not all files were attached and nothing was sent' : 'not all of the body and files were added and nothing was sent')}: ${detail}${sending ? '' : ' Delete that Draft before retrying, or a second one is created.'}`, code);
     }
   }
   if (options.draft) process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');
