@@ -77,7 +77,7 @@ export async function runSendCommand(ctx: Context, args: string[]): Promise<void
     const id = messageId(options.draft);
     if (!options.yes) {
       const summary = await graphRequest(ctx, 'GET', `/me/messages/${encodeURIComponent(id)}`, {
-        query: new URLSearchParams({ '$select': 'toRecipients,ccRecipients,bccRecipients,subject' }),
+        query: new URLSearchParams({ '$select': 'toRecipients,ccRecipients,bccRecipients,subject', '$expand': 'attachments($select=name)' }),
       }) as MessageSummary;
       preview(summary ?? {});
       usage("Sending a Draft requires '--yes'. Run the command again with '--yes' to send it.");

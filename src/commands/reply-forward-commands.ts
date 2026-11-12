@@ -74,10 +74,16 @@ export async function runReplyForwardCommand(ctx: Context, command: ReplyCommand
   const draftId = (response as { id?: string } | undefined)?.id;
   if (files) {
     if (!draftId) throw new CliError('Graph did not return a Draft id, so the attachments were not added.');
-    for (const file of files) {
-      await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/attachments`, { body: JSON.stringify(file) });
+    try {
+      for (const file of files) {
+        await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/attachments`, { body: JSON.stringify(file) });
+      }
+      if (!options.draft) await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/send`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const code = error instanceof CliError ? error.exitCode : 1;
+      throw new CliError(`Draft ${draftId} was created but ${options.draft ? 'not all files were attached' : 'was not sent'}: ${detail}`, code);
     }
-    if (!options.draft) await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(draftId)}/send`);
   }
   if (options.draft) process.stdout.write(draftId ? `Draft created: ${draftId}\n` : 'Draft created.\n');
   else process.stdout.write(`${command === 'reply-all' ? 'Reply-all' : command[0]!.toUpperCase() + command.slice(1)} sent.\n`);

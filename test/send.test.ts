@@ -99,12 +99,12 @@ it('rejects attachments that together exceed 3 MB and sends no request', async (
   const dir = mkdtempSync(join(tmpdir(), 'outlook-attach-'));
   const one = join(dir, 'one.bin');
   const two = join(dir, 'two.bin');
-  writeFileSync(one, Buffer.alloc(2 * 1024 * 1024));
-  writeFileSync(two, Buffer.alloc(2 * 1024 * 1024));
+  writeFileSync(one, Buffer.alloc(1.5 * 1024 * 1024));
+  writeFileSync(two, Buffer.alloc(1.5 * 1024 * 1024));
   try {
     const result = await cli.run(['send', '--to', 'person@example.test', '--attach', one, '--attach', two, '--yes']);
     assert.equal(result.code, 2);
-    assert.match(result.stderr, /total 3 MB/);
+    assert.match(result.stderr, /total 2\.5 MB/);
     assert.equal(servers.graph.requests.length, 0);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

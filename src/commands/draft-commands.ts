@@ -1,5 +1,5 @@
 import { graphRequest, type Context } from './auth-commands.js';
-import { usage } from '../utils/errors.js';
+import { CliError, usage } from '../utils/errors.js';
 import { attachments, bodyContent, recipients } from '../utils/compose.js';
 import { messageId } from '../utils/message-id.js';
 
@@ -73,7 +73,12 @@ export async function runDraftCommand(ctx: Context, args: string[]): Promise<voi
     // Graph cannot patch attachments onto an existing Draft; add each one separately.
     const updateId = messageId(options.update);
     for (const file of files ?? []) {
-      await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(updateId)}/attachments`, { body: JSON.stringify(file) });
+      try {
+        await graphRequest(ctx, 'POST', `/me/messages/${encodeURIComponent(updateId)}/attachments`, { body: JSON.stringify(file) });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new CliError(`Draft ${options.update} was updated but '${file.name}' was not attached: ${detail}`, error instanceof CliError ? error.exitCode : 1);
+      }
       process.stdout.write(`Attached: ${file.name}\n`);
     }
     process.stdout.write(`Draft updated: ${options.update}\n`);
